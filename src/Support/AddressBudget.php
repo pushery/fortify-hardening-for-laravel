@@ -6,9 +6,9 @@ namespace Pushery\FortifyHardening\Support;
 
 use Closure;
 use Illuminate\Cache\RateLimiter;
+use Illuminate\Contracts\Cache\Factory;
 use Illuminate\Contracts\Cache\LockProvider;
 use Illuminate\Contracts\Cache\LockTimeoutException;
-use Illuminate\Contracts\Cache\Repository;
 use Throwable;
 
 /**
@@ -25,8 +25,9 @@ use Throwable;
  * an address that was taken, sent for one the first request had only just registered.
  *
  * A mail is counted before it is sent, under a lock per address, so requests that arrive together
- * cannot all read an unspent budget and all send. A send that throws gives its count back. The key
- * is a hash of the address, so the cache holds no address.
+ * cannot all read an unspent budget and all send. The lock is taken in the store the count lives
+ * in, Laravel's `cache.limiter`, and in the default store where that one cannot lock. A send that
+ * throws gives its count back. The key is a hash of the address, so the cache holds no address.
  */
 final readonly class AddressBudget
 {
@@ -38,7 +39,7 @@ final readonly class AddressBudget
 
     public function __construct(
         private RateLimiter $limiter,
-        private Repository $cache,
+        private Factory $caches,
         private Settings $settings,
     ) {}
 
@@ -89,7 +90,7 @@ final readonly class AddressBudget
     private function count(string $address, int $amount): ?int
     {
         $key = 'fortify-hardening:registration-mail:'.hash('sha256', $address);
-        $store = $this->cache->getStore();
+        $store = $this->lockStore();
 
         if (! $store instanceof LockProvider) {
             return $this->increment($key, $amount);
@@ -103,6 +104,23 @@ final readonly class AddressBudget
         }
 
         return is_int($count) ? $count : null;
+    }
+
+    /**
+     * The store that locks an address: the one its count lives in, Laravel's `cache.limiter`, or the
+     * default store where that one cannot lock. Null when neither can.
+     */
+    private function lockStore(): ?LockProvider
+    {
+        foreach ([$this->settings->limiterStore(), null] as $name) {
+            $store = $this->caches->store($name)->getStore();
+
+            if ($store instanceof LockProvider) {
+                return $store;
+            }
+        }
+
+        return null;
     }
 
     private function increment(string $key, int $amount): int

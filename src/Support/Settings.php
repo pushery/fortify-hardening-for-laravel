@@ -116,6 +116,17 @@ final readonly class Settings
     }
 
     /**
+     * The cache store Laravel's rate limiter counts in, `cache.limiter`, or null for the default
+     * store.
+     */
+    public function limiterStore(): ?string
+    {
+        $value = $this->config->get('cache.limiter');
+
+        return is_string($value) && $value !== '' ? $value : null;
+    }
+
+    /**
      * The guard Fortify signs users in with, whose user provider finds an existing account.
      */
     public function fortifyGuard(): string
