@@ -98,8 +98,11 @@ return [
     | default of 200 ms is shorter than the bcrypt hash an existing account
     | costs at Laravel's 12 rounds, so the difference still shows. The package
     | raises the minimum to the value below, in microseconds, unless your
-    | application sets `auth.timebox_duration` itself. A successful sign-in or
-    | reset still returns at once. `0` leaves Laravel's default in place.
+    | application sets `auth.timebox_duration` itself. With Fortify's two-factor
+    | feature on, Fortify checks the password in a step of its own first and
+    | holds a failure there to 200 ms; the package holds that step to the same
+    | minimum. A successful sign-in or reset still returns at once. `0` leaves
+    | Laravel's default in place.
     */
     'timebox' => [
         'microseconds' => is_numeric($timebox = env('FORTIFY_HARDENING_TIMEBOX_MICROSECONDS')) && (int) $timebox >= 0

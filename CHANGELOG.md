@@ -4,6 +4,18 @@ All notable changes to `pushery/fortify-hardening-for-laravel` are documented he
 
 A release carries only the sections that have an entry, in this order: `### ⚠️ Breaking`, `### ✨ Added`, `### 🔧 Changed`, `### ⚡ Performance`, `### 🐛 Fixed`, `### 🔒 Security`, `### 🧹 Deprecated`, `### 🗑️ Removed` and `### 📚 Documentation`.
 
+## [0.1.1] - 2026-10-15
+
+A security release for applications that use Fortify's two-factor feature, together with a fix for the lock of the mail budget.
+
+### 🐛 Fixed
+
+- **The mail budget locks an address in the store it counts in.** The count lives in the store Laravel's rate limiter uses, `cache.limiter`, and the lock was taken in the default store. It is taken beside the count now, and in the default store only where the limiter's store cannot lock, so an application with a limiter store of its own, one per tenant for instance, keeps both together.
+
+### 🔒 Security
+
+- **A failed sign-in through Fortify's two-factor step waits the full minimum.** With Fortify's two-factor feature on, Fortify checks the password in a step of its own before the guard does, and it held a failure there to a fixed 200 ms, less than the hash an existing account costs, so an address with an account still answered later than one without. The package holds that step to `auth.timebox_duration`, the minimum the guard reads, whether the step is Fortify's or one the application binds with `Fortify::redirectUserForTwoFactorAuthenticationUsing()`.
+
 ## [0.1.0] - 2026-10-13
 
 The first release. The package stops Laravel Fortify from revealing whether an account exists for an address: registration and password reset answer a taken address and a free one alike and in the same time, and the holder of a taken address is told by mail instead of getting a second account.

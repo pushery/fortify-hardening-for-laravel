@@ -5,12 +5,15 @@ declare(strict_types=1);
 namespace Pushery\FortifyHardening;
 
 use Illuminate\Contracts\Config\Repository;
+use Illuminate\Contracts\Container\Container;
 use Illuminate\Contracts\Foundation\CachesConfiguration;
 use Illuminate\Support\ServiceProvider;
 use Laravel\Fortify\Contracts\FailedPasswordResetLinkRequestResponse;
 use Laravel\Fortify\Contracts\FailedPasswordResetResponse;
+use Laravel\Fortify\Contracts\RedirectsIfTwoFactorAuthenticatable;
 use Laravel\Fortify\Http\Controllers\RegisteredUserController;
 use Override;
+use Pushery\FortifyHardening\Actions\TimeboxedTwoFactorStep;
 use Pushery\FortifyHardening\Contracts\RegistrationAccepted;
 use Pushery\FortifyHardening\Http\Controllers\EnumerationSafeRegisteredUserController;
 use Pushery\FortifyHardening\Http\Responses\NeutralPasswordResetLinkResponse;
@@ -41,6 +44,8 @@ final class FortifyHardeningServiceProvider extends ServiceProvider
 
         $this->bindInPlaceOfFortify();
 
+        $this->holdTheTwoFactorStepToTheTimebox();
+
         if ($this->app->runningInConsole()) {
             $this->registerPublishing();
         }
@@ -62,6 +67,28 @@ final class FortifyHardeningServiceProvider extends ServiceProvider
         if ($microseconds > 0 && ! is_int($repository->get('auth.timebox_duration'))) {
             $repository->set('auth.timebox_duration', $microseconds);
         }
+    }
+
+    /**
+     * Hold Fortify's two-factor step of the sign-in to the minimum the guard reads, unless the
+     * package's minimum is switched off.
+     *
+     * With the two-factor feature on, that step checks the password before the guard does and
+     * holds a failure to a fixed 200 milliseconds of its own. The step is wrapped where Fortify's
+     * contract resolves, so one the application binds with
+     * `Fortify::redirectUserForTwoFactorAuthenticationUsing()` is held as well. A login pipeline of
+     * the application's own that names a class instead of the contract is left as it is.
+     */
+    private function holdTheTwoFactorStepToTheTimebox(): void
+    {
+        if ($this->app->make(Settings::class)->timeboxMicroseconds() === 0) {
+            return;
+        }
+
+        $this->app->extend(
+            RedirectsIfTwoFactorAuthenticatable::class,
+            static fn (RedirectsIfTwoFactorAuthenticatable $step, Container $app): TimeboxedTwoFactorStep => new TimeboxedTwoFactorStep($step, $app->make(Repository::class)),
+        );
     }
 
     /**
