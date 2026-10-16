@@ -38,6 +38,11 @@ final readonly class Settings
         return $this->boolean('fortify-hardening.registration.enabled', true);
     }
 
+    public function hashesLoginKeys(): bool
+    {
+        return $this->boolean('fortify-hardening.hashed_login_keys.enabled', true);
+    }
+
     /**
      * The form request that validates a registration, the same way for a free address and a taken one.
      */

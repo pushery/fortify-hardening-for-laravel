@@ -4,6 +4,14 @@ All notable changes to `pushery/fortify-hardening-for-laravel` are documented he
 
 A release carries only the sections that have an entry, in this order: `### ⚠️ Breaking`, `### ✨ Added`, `### 🔧 Changed`, `### ⚡ Performance`, `### 🐛 Fixed`, `### 🔒 Security`, `### 🧹 Deprecated`, `### 🗑️ Removed` and `### 📚 Documentation`.
 
+## [0.2.0] - 2026-10-16
+
+Fortify's sign-in limiter counts under a hashed key, so neither the cache store nor an error tracker that records cache calls holds an address or a client IP any more.
+
+### 🔒 Security
+
+- **Fortify's sign-in limiter counts under a key that names nobody.** Fortify keys its count of failed sign-ins with the lower-cased address and the client IP as they are, so both stood in the cache store and in what an error tracker records for cache calls. The package now binds a `LoginRateLimiter` that counts under the same pair hashed with the application key; the count, the limit of five a minute and the wait stay Fortify's. Counts running at the deploy start again. `FORTIFY_HARDENING_HASHED_LOGIN_KEYS=false` switches it off.
+
 ## [0.1.1] - 2026-10-15
 
 A security release for applications that use Fortify's two-factor feature, together with a fix for the lock of the mail budget.

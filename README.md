@@ -59,6 +59,7 @@ difference too. With the package installed, Fortify's own routes answer every ca
 | Reset link | an unknown address is refused, a recent one is told to wait | every request reads like a link that was sent |
 | Password reset | an unknown address and a wrong token give different errors | every failure reads like a wrong token |
 | Timing | a taken address answers sooner, a known one takes longer on the password routes | both answers take the same time |
+| Sign-in limiter | failed sign-ins are counted under the address and the IP as they are | the same count under a key hashed with the application key |
 
 Nothing needs to be wired: the package puts its answers in place of Fortify's through the
 container. Give new accounts a verification mail (`MustVerifyEmail` on the user model) and show
