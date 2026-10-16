@@ -110,4 +110,20 @@ return [
             : 1_000_000,
     ],
 
+    /*
+    | Fortify counts failed sign-ins under the address and the client IP as
+    | they are, so both stand in the cache key, in the cache store and in what
+    | an error tracker records about cache calls. The package counts under the
+    | same pair hashed with the application key, so the count and the limit
+    | stay Fortify's and the key names nobody. Counts that run when you switch
+    | it on or off start again.
+    */
+    'hashed_login_keys' => [
+        'enabled' => ! in_array(
+            is_string($hashedLoginKeys = env('FORTIFY_HARDENING_HASHED_LOGIN_KEYS')) ? strtolower(trim($hashedLoginKeys)) : $hashedLoginKeys,
+            [false, '', '0', 'false', 'no', 'off'],
+            true,
+        ),
+    ],
+
 ];

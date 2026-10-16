@@ -12,6 +12,7 @@ use Laravel\Fortify\Contracts\FailedPasswordResetLinkRequestResponse;
 use Laravel\Fortify\Contracts\FailedPasswordResetResponse;
 use Laravel\Fortify\Contracts\RedirectsIfTwoFactorAuthenticatable;
 use Laravel\Fortify\Http\Controllers\RegisteredUserController;
+use Laravel\Fortify\LoginRateLimiter;
 use Override;
 use Pushery\FortifyHardening\Actions\TimeboxedTwoFactorStep;
 use Pushery\FortifyHardening\Contracts\RegistrationAccepted;
@@ -19,6 +20,7 @@ use Pushery\FortifyHardening\Http\Controllers\EnumerationSafeRegisteredUserContr
 use Pushery\FortifyHardening\Http\Responses\NeutralPasswordResetLinkResponse;
 use Pushery\FortifyHardening\Http\Responses\NeutralPasswordResetResponse;
 use Pushery\FortifyHardening\Http\Responses\NeutralRegistrationResponse;
+use Pushery\FortifyHardening\Support\HashedLoginRateLimiter;
 use Pushery\FortifyHardening\Support\Settings;
 
 /**
@@ -112,6 +114,10 @@ final class FortifyHardeningServiceProvider extends ServiceProvider
 
         if ($settings->hardensRegistration()) {
             $this->app->bind(RegisteredUserController::class, EnumerationSafeRegisteredUserController::class);
+        }
+
+        if ($settings->hashesLoginKeys()) {
+            $this->app->bind(LoginRateLimiter::class, HashedLoginRateLimiter::class);
         }
     }
 
