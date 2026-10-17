@@ -100,6 +100,14 @@ final readonly class Settings
     }
 
     /**
+     * Whether the notice says that a forgotten password can be reset.
+     */
+    public function noticeMentionsPasswordReset(): bool
+    {
+        return $this->boolean('fortify-hardening.registration.notice_mentions_password_reset', true);
+    }
+
+    /**
      * How many mails the registration form may send to one address within an hour.
      */
     public function maxMailsPerHour(): int

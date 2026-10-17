@@ -8,9 +8,10 @@ return [
     ],
 
     'notice' => [
-        'subject' => 'Alguien ha intentado registrarse con tu correo electrónico',
+        'subject' => 'Alguien ha intentado registrarse en :app con tu correo electrónico',
         'attempt' => 'Alguien ha intentado crear una cuenta con esta dirección de correo electrónico, pero ya tienes una.',
         'action' => 'Iniciar sesión',
         'next' => 'Si has sido tú y has olvidado tu contraseña, puedes restablecerla desde la página de inicio de sesión. Si no has sido tú, no tienes que hacer nada.',
+        'next_without_password' => 'Si has sido tú, puedes iniciar sesión desde la página de inicio de sesión. Si no has sido tú, no tienes que hacer nada.',
     ],
 ];
