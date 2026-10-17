@@ -4,6 +4,19 @@ All notable changes to `pushery/fortify-hardening-for-laravel` are documented he
 
 A release carries only the sections that have an entry, in this order: `### ⚠️ Breaking`, `### ✨ Added`, `### 🔧 Changed`, `### ⚡ Performance`, `### 🐛 Fixed`, `### 🔒 Security`, `### 🧹 Deprecated`, `### 🗑️ Removed` and `### 📚 Documentation`.
 
+## [0.3.0] - 2026-10-17
+
+The notice to the holder of a taken address names the application and can greet the holder, it stops suggesting a password reset to an application without passwords, and `assertEnumerationSafe()` passes a Livewire form that answers a known and an unknown identity alike.
+
+### ✨ Added
+
+- **The notice to the holder of a taken address names the application, and a host can greet the holder.** The subject says where somebody tried to register, from `app.name`. A subclass named in `fortify-hardening.registration.notification` can return another name from `applicationName()`, such as the instance where one installation serves several, and a greeting from `greeting()`; both receive the notifiable. A published translation of the subject places the name with `:app`.
+- **The notice no longer suggests a password reset to an application without passwords.** With `fortify-hardening.registration.notice_mentions_password_reset` set to `false`, its last line points at the sign-in page alone, in all seven languages.
+
+### 🐛 Fixed
+
+- **`assertEnumerationSafe()` passes a Livewire form that answers a known and an unknown identity alike.** It compared a JSON body byte for byte, and a Livewire update response is never the same twice: the component id is drawn at random, the snapshot carries a checksum, and the response repeats the address that was typed. The fingerprint now reads each snapshot as data without its checksum, writes `<component-id>` for the ids Livewire drew, and writes `<identity>` wherever the response repeats the identity that was sent, in the status line, the errors and the redirect as well. A field that tells the two apart still fails the assertion.
+
 ## [0.2.0] - 2026-10-16
 
 Fortify's sign-in limiter counts under a hashed key, so neither the cache store nor an error tracker that records cache calls holds an address or a client IP any more.

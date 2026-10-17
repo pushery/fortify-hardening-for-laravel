@@ -58,6 +58,11 @@ The first publishes the configuration file and the translations together. Every 
 - If the application queues the verification mail, extend
   `Pushery\FortifyHardening\Notifications\AccountAlreadyExistsNotification` with `ShouldQueue` and
   name it in `fortify-hardening.registration.notification`.
+- If one installation serves several instances, or the application greets people by name, override
+  `applicationName()` and `greeting()` in that subclass. Both receive the notifiable.
+- If nobody signs in with a password, set
+  `fortify-hardening.registration.notice_mentions_password_reset` to `false`, so the
+  notice points at the sign-in page alone.
 - When users register in a controller of the application's own, call
   `Pushery\FortifyHardening\Registration\Registrar::register()` instead of creating the user there.
 

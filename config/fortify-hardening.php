@@ -82,6 +82,11 @@ return [
         'notification' => AccountAlreadyExistsNotification::class,
         'notice_channels' => ['mail'],
 
+        // Whether the notice's last line says that a forgotten password can be
+        // reset. An application that signs nobody in with a password sets this to
+        // false, and the line points at the sign-in page alone.
+        'notice_mentions_password_reset' => true,
+
         // How many mails the registration form may send to one address within
         // an hour, the verification link of a new account included. Read typed
         // and held to a floor of 1: a value no ceiling can use, such as `abc`,

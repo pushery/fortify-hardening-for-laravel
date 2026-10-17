@@ -8,9 +8,10 @@ return [
     ],
 
     'notice' => [
-        'subject' => 'Someone tried to register with your email address',
+        'subject' => 'Someone tried to register at :app with your email address',
         'attempt' => 'Someone tried to create an account with this email address, but you already have one.',
         'action' => 'Sign in',
         'next' => 'If that was you and you have forgotten your password, you can reset it from the sign-in page. If it was not you, there is nothing you need to do.',
+        'next_without_password' => 'If that was you, you can sign in from the sign-in page. If it was not you, there is nothing you need to do.',
     ],
 ];

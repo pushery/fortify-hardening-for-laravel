@@ -8,9 +8,10 @@ return [
     ],
 
     'notice' => [
-        'subject' => 'Jemand wollte sich mit deiner E-Mail-Adresse registrieren',
+        'subject' => 'Jemand wollte sich bei :app mit deiner E-Mail-Adresse registrieren',
         'attempt' => 'Jemand hat versucht, mit dieser E-Mail-Adresse ein Konto anzulegen, aber du hast bereits eins.',
         'action' => 'Anmelden',
         'next' => 'Wenn du das warst und dein Passwort vergessen hast, kannst du es auf der Anmeldeseite zurücksetzen. Wenn du es nicht warst, musst du nichts tun.',
+        'next_without_password' => 'Wenn du das warst, kannst du dich auf der Anmeldeseite anmelden. Wenn du es nicht warst, musst du nichts tun.',
     ],
 ];
