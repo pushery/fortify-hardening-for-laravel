@@ -14,12 +14,13 @@ use Override;
  * Fortify's two-factor step of the sign-in, held to the minimum duration the guard reads.
  *
  * With Fortify's two-factor feature on, the login pipeline checks the password in this step, before
- * the guard does, and a failure ends the request here. Fortify holds that failure to a fixed 200
- * milliseconds of its own, less than the hash an existing account costs, so an address with an
- * account would answer later than one without. This step runs the one bound to Fortify's contract,
- * Fortify's or the application's own, and holds a failure to `auth.timebox_duration`, the minimum
- * the guard holds a failed sign-in to. A request the step passes on, or answers with the two-factor
- * challenge, returns at once; a failure further down the pipeline is held as well.
+ * the guard does, and a failure ends the request here. From Fortify 1.40 on it holds that failure to
+ * a fixed 200 milliseconds of its own, and earlier releases do not hold it at all. Either is less
+ * than the hash an existing account costs, so an address with an account would answer later than
+ * one without. This step runs the one bound to Fortify's contract, Fortify's or the application's
+ * own, and holds a failure to `auth.timebox_duration`, the minimum the guard holds a failed sign-in
+ * to. A request the step passes on, or answers with the two-factor challenge, returns at once; a
+ * failure further down the pipeline is held as well.
  */
 final readonly class TimeboxedTwoFactorStep implements RedirectsIfTwoFactorAuthenticatable
 {

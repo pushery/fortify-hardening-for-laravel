@@ -4,6 +4,18 @@ All notable changes to `pushery/fortify-hardening-for-laravel` are documented he
 
 A release carries only the sections that have an entry, in this order: `### ⚠️ Breaking`, `### ✨ Added`, `### 🔧 Changed`, `### ⚡ Performance`, `### 🐛 Fixed`, `### 🔒 Security`, `### 🧹 Deprecated`, `### 🗑️ Removed` and `### 📚 Documentation`.
 
+## [0.4.0] - 2026-10-21
+
+A regional locale reads the package's catalog of its language, so an application running `pt-BR` or `pt-PT` sends the notice to the holder of a taken address in Portuguese, and the timing page says from which release Fortify holds a failed two-factor sign-in itself.
+
+### ✨ Added
+
+- **A regional locale reads the package's catalog of its language.** The catalogs ship per language, and Laravel's translator asks for the given locale and then for `app.fallback_locale`, so an application running `pt-BR` or `pt-PT` sent the notice to the holder of a taken address and the answer to a registration in the fallback language. The package now wraps the translation loader so that a regional locale of the `fortify-hardening` namespace reads its language, `pt-BR` from `pt` and `en-GB` from `en`, a region nobody listed included. A catalog published for the region under `lang/vendor/fortify-hardening/` wins over the language key by key. Every other namespace keeps Laravel's lookup.
+
+### 📚 Documentation
+
+- **The timing page and the configuration say when Fortify's own two-factor wait applies.** Fortify holds a failed sign-in in its two-factor step to 200 ms from release 1.40 on, and earlier releases do not hold it at all, while the package allows `laravel/fortify` from 1.0. The package's minimum applies in both cases.
+
 ## [0.3.0] - 2026-10-17
 
 The notice to the holder of a taken address names the application and can greet the holder, it stops suggesting a password reset to an application without passwords, and `assertEnumerationSafe()` passes a Livewire form that answers a known and an unknown identity alike.
@@ -50,3 +62,10 @@ The first release. The package stops Laravel Fortify from revealing whether an a
 - **`Registrar`** for applications that register users in a controller of their own, and the `RegistrationAccepted` contract for an answer of their own.
 - **`AssertsEnumerationSafety`**, the assertion the package proves itself with, for an application's own suite.
 - **Switches that read what a host writes.** Each section is switched off with `false`, `0`, `no`, `off` or an empty value, in any case and with spaces around it, and any other value keeps it on.
+
+[Unreleased]: https://github.com/pushery/fortify-hardening-for-laravel/compare/v0.4.0...HEAD
+[0.4.0]: https://github.com/pushery/fortify-hardening-for-laravel/compare/v0.3.0...v0.4.0
+[0.3.0]: https://github.com/pushery/fortify-hardening-for-laravel/compare/v0.2.0...v0.3.0
+[0.2.0]: https://github.com/pushery/fortify-hardening-for-laravel/compare/v0.1.1...v0.2.0
+[0.1.1]: https://github.com/pushery/fortify-hardening-for-laravel/compare/v0.1.0...v0.1.1
+[0.1.0]: https://github.com/pushery/fortify-hardening-for-laravel/releases/tag/v0.1.0
