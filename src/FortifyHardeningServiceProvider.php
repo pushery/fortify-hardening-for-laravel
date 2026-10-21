@@ -7,6 +7,7 @@ namespace Pushery\FortifyHardening;
 use Illuminate\Contracts\Config\Repository;
 use Illuminate\Contracts\Container\Container;
 use Illuminate\Contracts\Foundation\CachesConfiguration;
+use Illuminate\Contracts\Translation\Loader;
 use Illuminate\Support\ServiceProvider;
 use Laravel\Fortify\Contracts\FailedPasswordResetLinkRequestResponse;
 use Laravel\Fortify\Contracts\FailedPasswordResetResponse;
@@ -21,6 +22,7 @@ use Pushery\FortifyHardening\Http\Responses\NeutralPasswordResetLinkResponse;
 use Pushery\FortifyHardening\Http\Responses\NeutralPasswordResetResponse;
 use Pushery\FortifyHardening\Http\Responses\NeutralRegistrationResponse;
 use Pushery\FortifyHardening\Support\HashedLoginRateLimiter;
+use Pushery\FortifyHardening\Support\LanguageFallbackLoader;
 use Pushery\FortifyHardening\Support\Settings;
 
 /**
@@ -34,6 +36,10 @@ final class FortifyHardeningServiceProvider extends ServiceProvider
     public function register(): void
     {
         $this->mergeConfigRecursivelyFrom(__DIR__.'/../config/fortify-hardening.php', 'fortify-hardening');
+
+        // A regional locale reads this package's catalog of its language, `pt-BR` from `pt`, in this package's
+        // namespace only. Registered here so it wraps the loader before the translator is built from it.
+        $this->app->extend('translation.loader', static fn (Loader $loader): Loader => new LanguageFallbackLoader($loader, 'fortify-hardening'));
 
         $this->app->bindIf(RegistrationAccepted::class, NeutralRegistrationResponse::class);
 
