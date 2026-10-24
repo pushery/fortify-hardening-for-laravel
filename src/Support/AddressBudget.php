@@ -9,6 +9,7 @@ use Illuminate\Cache\RateLimiter;
 use Illuminate\Contracts\Cache\Factory;
 use Illuminate\Contracts\Cache\LockProvider;
 use Illuminate\Contracts\Cache\LockTimeoutException;
+use Illuminate\Support\Str;
 use Throwable;
 
 /**
@@ -27,7 +28,12 @@ use Throwable;
  * A mail is counted before it is sent, under a lock per address, so requests that arrive together
  * cannot all read an unspent budget and all send. The lock is taken in the store the count lives
  * in, Laravel's `cache.limiter`, and in the default store where that one cannot lock. A send that
- * throws gives its count back. The key is a hash of the address, so the cache holds no address.
+ * throws gives its count back.
+ *
+ * The count is kept per mailbox rather than per spelling: case, surrounding whitespace and a `+tag`
+ * in the local part reach the same inbox at most providers, and each spelling registers as a new
+ * address, so a budget per spelling would let one inbox receive a mail for every variant. The key is
+ * a hash of that mailbox, so the cache holds no address.
  */
 final readonly class AddressBudget
 {
@@ -89,7 +95,7 @@ final readonly class AddressBudget
      */
     private function count(string $address, int $amount): ?int
     {
-        $key = 'fortify-hardening:registration-mail:'.hash('sha256', $address);
+        $key = 'fortify-hardening:registration-mail:'.hash('sha256', $this->mailbox($address));
         $store = $this->lockStore();
 
         if (! $store instanceof LockProvider) {
@@ -104,6 +110,29 @@ final readonly class AddressBudget
         }
 
         return is_int($count) ? $count : null;
+    }
+
+    /**
+     * The mailbox an address reaches, as the budget counts it: trimmed, in lower case, and without a
+     * `+tag` in its local part. Dots in the local part stay, since only some providers ignore them,
+     * and so does a plus that opens the local part, which would otherwise leave it empty.
+     */
+    private function mailbox(string $address): string
+    {
+        $mailbox = Str::lower(trim($address));
+        $at = strrpos($mailbox, '@');
+
+        if ($at === false) {
+            return $mailbox;
+        }
+
+        $plus = strpos(substr($mailbox, 0, $at), '+');
+
+        if ($plus === false || $plus === 0) {
+            return $mailbox;
+        }
+
+        return substr($mailbox, 0, $plus).substr($mailbox, $at);
     }
 
     /**

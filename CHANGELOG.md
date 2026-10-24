@@ -4,6 +4,16 @@ All notable changes to `pushery/fortify-hardening-for-laravel` are documented he
 
 A release carries only the sections that have an entry, in this order: `### ⚠️ Breaking`, `### ✨ Added`, `### 🔧 Changed`, `### ⚡ Performance`, `### 🐛 Fixed`, `### 🔒 Security`, `### 🧹 Deprecated`, `### 🗑️ Removed` and `### 📚 Documentation`.
 
+## [0.4.1] - 2026-10-24
+
+The mail budget of the registration form counts per mailbox, so the `+tag` spellings of one address, which most providers deliver to the same inbox, share one hour's budget instead of each getting its own.
+
+### 🔒 Security
+
+- **The mail budget of the registration form counts per mailbox, not per spelling.** It keyed its count with the address as it arrived, so `name+a@example.com` and `name+b@example.com`, which most providers deliver to the inbox of `name@example.com`, had a budget each, and since every spelling registers as a new address, one inbox could receive a verification mail for every variant. The count now ignores case, surrounding whitespace and a `+tag` in the local part; a dot in the local part still makes another address.
+
+  **Upgrade:** nothing to do. A count kept under a spelling before the update runs out within its hour.
+
 ## [0.4.0] - 2026-10-21
 
 A regional locale reads the package's catalog of its language, so an application running `pt-BR` or `pt-PT` sends the notice to the holder of a taken address in Portuguese, and the timing page says from which release Fortify holds a failed two-factor sign-in itself.
@@ -63,7 +73,8 @@ The first release. The package stops Laravel Fortify from revealing whether an a
 - **`AssertsEnumerationSafety`**, the assertion the package proves itself with, for an application's own suite.
 - **Switches that read what a host writes.** Each section is switched off with `false`, `0`, `no`, `off` or an empty value, in any case and with spaces around it, and any other value keeps it on.
 
-[Unreleased]: https://github.com/pushery/fortify-hardening-for-laravel/compare/v0.4.0...HEAD
+[Unreleased]: https://github.com/pushery/fortify-hardening-for-laravel/compare/v0.4.1...HEAD
+[0.4.1]: https://github.com/pushery/fortify-hardening-for-laravel/compare/v0.4.0...v0.4.1
 [0.4.0]: https://github.com/pushery/fortify-hardening-for-laravel/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/pushery/fortify-hardening-for-laravel/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/pushery/fortify-hardening-for-laravel/compare/v0.1.1...v0.2.0
