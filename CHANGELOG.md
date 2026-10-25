@@ -4,6 +4,24 @@ All notable changes to `pushery/fortify-hardening-for-laravel` are documented he
 
 A release carries only the sections that have an entry, in this order: `### ⚠️ Breaking`, `### ✨ Added`, `### 🔧 Changed`, `### ⚡ Performance`, `### 🐛 Fixed`, `### 🔒 Security`, `### 🧹 Deprecated`, `### 🗑️ Removed` and `### 📚 Documentation`.
 
+## [0.5.0] - 2026-10-25
+
+The mail budget of the registration form counts the spellings of a Gmail address as one inbox, the rule it counts under is public as `Support\Mailbox::of()`, and a reset form sent twice is answered as the reset it repeats.
+
+### ✨ Added
+
+- **`Support\Mailbox::of()` names the inbox an address reaches, the key the mail budget of the registration counts under.** An application that counts mails of its own per address can count them under the same key instead of keeping a copy of the rule. The key is for counting and is no identity: an account keeps its address as it was typed.
+
+### 🐛 Fixed
+
+- **A reset form sent twice is answered as the reset it repeats.** A double click sent the reset form twice, the first request set the password and used the token up, and the second was answered as a reset with an invalid token, although the new password already held. The second request now receives the answer of a reset that went through where it repeats one the same session completed within the last minute: the same address, a password its confirmation agrees with, and the password the account now holds. Every other refused reset keeps the invalid-token answer.
+
+### 🔒 Security
+
+- **The mail budget of the registration counts the spellings of a Gmail address as one inbox.** Gmail ignores the dots in the local part and delivers `googlemail.com` to the same inbox as `gmail.com`, and the budget counted each such spelling on a budget of its own. A local part of eleven characters has 1,024 spellings with dots, twice over with the second domain, and each received the hour's mail. These spellings now share one budget. Under any other domain a dot stays, since there it can name another inbox.
+
+  **Upgrade:** nothing to do. A count kept under a dotted spelling before the update runs out within its hour.
+
 ## [0.4.1] - 2026-10-24
 
 The mail budget of the registration form counts per mailbox, so the `+tag` spellings of one address, which most providers deliver to the same inbox, share one hour's budget instead of each getting its own.
@@ -73,7 +91,8 @@ The first release. The package stops Laravel Fortify from revealing whether an a
 - **`AssertsEnumerationSafety`**, the assertion the package proves itself with, for an application's own suite.
 - **Switches that read what a host writes.** Each section is switched off with `false`, `0`, `no`, `off` or an empty value, in any case and with spaces around it, and any other value keeps it on.
 
-[Unreleased]: https://github.com/pushery/fortify-hardening-for-laravel/compare/v0.4.1...HEAD
+[Unreleased]: https://github.com/pushery/fortify-hardening-for-laravel/compare/v0.5.0...HEAD
+[0.5.0]: https://github.com/pushery/fortify-hardening-for-laravel/compare/v0.4.1...v0.5.0
 [0.4.1]: https://github.com/pushery/fortify-hardening-for-laravel/compare/v0.4.0...v0.4.1
 [0.4.0]: https://github.com/pushery/fortify-hardening-for-laravel/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/pushery/fortify-hardening-for-laravel/compare/v0.2.0...v0.3.0

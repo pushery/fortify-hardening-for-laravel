@@ -9,7 +9,6 @@ use Illuminate\Cache\RateLimiter;
 use Illuminate\Contracts\Cache\Factory;
 use Illuminate\Contracts\Cache\LockProvider;
 use Illuminate\Contracts\Cache\LockTimeoutException;
-use Illuminate\Support\Str;
 use Throwable;
 
 /**
@@ -30,10 +29,11 @@ use Throwable;
  * in, Laravel's `cache.limiter`, and in the default store where that one cannot lock. A send that
  * throws gives its count back.
  *
- * The count is kept per mailbox rather than per spelling: case, surrounding whitespace and a `+tag`
- * in the local part reach the same inbox at most providers, and each spelling registers as a new
- * address, so a budget per spelling would let one inbox receive a mail for every variant. The key is
- * a hash of that mailbox, so the cache holds no address.
+ * The count is kept per inbox rather than per spelling, under the key {@see Mailbox::of()} gives the
+ * address: case, surrounding whitespace and a `+tag` in the local part reach the same inbox at most
+ * providers, and so do the dots of a Gmail address, under `gmail.com` or `googlemail.com`. Each
+ * spelling registers as a new address, so a budget per spelling would let one inbox receive a mail
+ * for every variant. The key is a hash of that inbox, so the cache holds no address.
  */
 final readonly class AddressBudget
 {
@@ -95,7 +95,7 @@ final readonly class AddressBudget
      */
     private function count(string $address, int $amount): ?int
     {
-        $key = 'fortify-hardening:registration-mail:'.hash('sha256', $this->mailbox($address));
+        $key = 'fortify-hardening:registration-mail:'.hash('sha256', Mailbox::of($address));
         $store = $this->lockStore();
 
         if (! $store instanceof LockProvider) {
@@ -110,29 +110,6 @@ final readonly class AddressBudget
         }
 
         return is_int($count) ? $count : null;
-    }
-
-    /**
-     * The mailbox an address reaches, as the budget counts it: trimmed, in lower case, and without a
-     * `+tag` in its local part. Dots in the local part stay, since only some providers ignore them,
-     * and so does a plus that opens the local part, which would otherwise leave it empty.
-     */
-    private function mailbox(string $address): string
-    {
-        $mailbox = Str::lower(trim($address));
-        $at = strrpos($mailbox, '@');
-
-        if ($at === false) {
-            return $mailbox;
-        }
-
-        $plus = strpos(substr($mailbox, 0, $at), '+');
-
-        if ($plus === false || $plus === 0) {
-            return $mailbox;
-        }
-
-        return substr($mailbox, 0, $plus).substr($mailbox, $at);
     }
 
     /**
