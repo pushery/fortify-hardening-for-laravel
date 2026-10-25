@@ -98,6 +98,19 @@ public function store(RegisterRequest $request, Registrar $registrar): RedirectR
 The [registration guide](https://docs.pushery.com/fortify-hardening-for-laravel/registration)
 covers the form request, the notice to the holder and its mail budget.
 
+The mail budget counts the inbox an address reaches, not its spelling. An application that counts
+mails of its own can use the same key:
+
+```php
+use Pushery\FortifyHardening\Support\Mailbox;
+
+$key = 'contact-form:'.hash('sha256', Mailbox::of($request->string('email')->value()));
+```
+
+`Mailbox::of()` trims the address and writes it in lower case, drops a `+tag` in the local part, and
+for Gmail drops the dots in the local part and reads `googlemail.com` as `gmail.com`. It is a key to
+count under, not an identity: an account keeps its address as it was typed.
+
 To prove the property in your own suite, use the assertion the package ships:
 
 ```php

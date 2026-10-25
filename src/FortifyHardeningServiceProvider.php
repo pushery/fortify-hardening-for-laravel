@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 namespace Pushery\FortifyHardening;
 
+use Illuminate\Auth\Events\PasswordReset;
 use Illuminate\Contracts\Config\Repository;
 use Illuminate\Contracts\Container\Container;
+use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Contracts\Foundation\CachesConfiguration;
 use Illuminate\Contracts\Translation\Loader;
 use Illuminate\Support\ServiceProvider;
@@ -21,6 +23,7 @@ use Pushery\FortifyHardening\Http\Controllers\EnumerationSafeRegisteredUserContr
 use Pushery\FortifyHardening\Http\Responses\NeutralPasswordResetLinkResponse;
 use Pushery\FortifyHardening\Http\Responses\NeutralPasswordResetResponse;
 use Pushery\FortifyHardening\Http\Responses\NeutralRegistrationResponse;
+use Pushery\FortifyHardening\Listeners\RememberCompletedPasswordReset;
 use Pushery\FortifyHardening\Support\HashedLoginRateLimiter;
 use Pushery\FortifyHardening\Support\LanguageFallbackLoader;
 use Pushery\FortifyHardening\Support\Settings;
@@ -116,6 +119,9 @@ final class FortifyHardeningServiceProvider extends ServiceProvider
 
         if ($settings->neutralizesPasswordReset()) {
             $this->app->bind(FailedPasswordResetResponse::class, NeutralPasswordResetResponse::class);
+
+            // The note a reset form sent twice is recognized by, written while the broker still holds the token.
+            $this->app->make(Dispatcher::class)->listen(PasswordReset::class, RememberCompletedPasswordReset::class);
         }
 
         if ($settings->hardensRegistration()) {

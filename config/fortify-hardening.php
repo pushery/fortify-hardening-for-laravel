@@ -89,8 +89,9 @@ return [
 
         // How many mails the registration form may send to one mailbox within
         // an hour, the verification link of a new account included. Spellings
-        // that reach the same inbox share it: case, surrounding whitespace and a
-        // `+tag` in the local part do not make another address. Read typed
+        // that reach the same inbox share it: case, surrounding whitespace, a
+        // `+tag` in the local part and, for Gmail, the dots in the local part and
+        // the domain `googlemail.com` do not make another address. Read typed
         // and held to a floor of 1: a value no ceiling can use, such as `abc`,
         // `0` or `-3`, lands on the default rather than on no ceiling at all.
         'max_mails_per_hour' => is_numeric($maxMailsPerHour = env('FORTIFY_HARDENING_MAX_MAILS_PER_HOUR')) && (int) $maxMailsPerHour >= 1
