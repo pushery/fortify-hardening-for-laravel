@@ -54,7 +54,8 @@ The first publishes the configuration file and the translations together. Every 
 - If the registration form takes more fields than Fortify's stub, extend
   `Pushery\FortifyHardening\Http\Requests\RegistrationRequest`, add their rules, and name the class
   in `fortify-hardening.registration.request`. Keep the rules the ones the `CreatesNewUsers` action
-  checks, and never add a `unique` rule on the address.
+  checks, keep the rule that refuses a carriage return and a line feed in the address, and never
+  add a `unique` rule on the address.
 - If the application queues the verification mail, extend
   `Pushery\FortifyHardening\Notifications\AccountAlreadyExistsNotification` with `ShouldQueue` and
   name it in `fortify-hardening.registration.notification`.
