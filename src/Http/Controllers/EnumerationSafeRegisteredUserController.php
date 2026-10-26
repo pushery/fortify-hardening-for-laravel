@@ -43,9 +43,12 @@ final class EnumerationSafeRegisteredUserController extends RegisteredUserContro
     public function store(Request $request, CreatesNewUsers $creator): RegisterResponse
     {
         $username = Fortify::username();
+        $given = $request->input($username);
 
-        if ($this->settings->lowercasesUsernames() && $request->has($username)) {
-            $request->merge([$username => Str::lower($request->string($username)->value())]);
+        // Only text is written in lower case here. Anything else reaches the form request as it was
+        // sent, and its `string` rule refuses it at the field.
+        if ($this->settings->lowercasesUsernames() && is_string($given)) {
+            $request->merge([$username => Str::lower($given)]);
         }
 
         // Resolving a form request validates it, and a failure throws before anything is looked up.

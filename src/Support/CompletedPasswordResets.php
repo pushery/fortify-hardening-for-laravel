@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Pushery\FortifyHardening\Support;
 
-use Illuminate\Auth\Passwords\PasswordBroker;
+use Illuminate\Auth\AuthManager;
 use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Contracts\Auth\CanResetPassword;
 use Illuminate\Contracts\Auth\PasswordBrokerFactory;
@@ -39,6 +39,7 @@ final readonly class CompletedPasswordResets
         private Hasher $hasher,
         private PasswordBrokerFactory $brokers,
         private Config $config,
+        private AuthManager $auth,
     ) {}
 
     /** Note that the password of this account was reset in the session of this request. */
@@ -67,10 +68,37 @@ final readonly class CompletedPasswordResets
             return false;
         }
 
-        $broker = $this->brokers->broker($this->brokerName());
-        $user = $broker instanceof PasswordBroker ? $broker->getUser([Fortify::email() => $email]) : null;
+        $user = $this->user($email);
 
         return $user instanceof Authenticatable && $this->hasher->check($password, $user->getAuthPassword());
+    }
+
+    /**
+     * The account an address names, looked up where the broker Fortify resets with looks.
+     *
+     * Laravel's broker, and a broker of the application's that hands getUser() on to it, answer for themselves. A
+     * broker that implements the contract alone cannot be asked, so the account comes from the user provider its
+     * configuration names, which is where Laravel's broker looks it up.
+     */
+    private function user(string $email): ?Authenticatable
+    {
+        $name = $this->brokerName();
+        $broker = $this->brokers->broker($name);
+        $credentials = [Fortify::email() => $email];
+
+        $user = method_exists($broker, 'getUser')
+            ? $broker->getUser($credentials)
+            : $this->auth->createUserProvider($this->providerOf($name))?->retrieveByCredentials($credentials);
+
+        return $user instanceof Authenticatable ? $user : null;
+    }
+
+    /** The user provider a broker's configuration names, or null for the application's default provider. */
+    private function providerOf(?string $broker): ?string
+    {
+        $provider = $this->config->get("auth.passwords.{$broker}.provider");
+
+        return is_string($provider) ? $provider : null;
     }
 
     /** The cache key of a session and an address, hashed so the cache holds neither. */

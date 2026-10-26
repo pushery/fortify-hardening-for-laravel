@@ -4,6 +4,20 @@ All notable changes to `pushery/fortify-hardening-for-laravel` are documented he
 
 A release carries only the sections that have an entry, in this order: `### ⚠️ Breaking`, `### ✨ Added`, `### 🔧 Changed`, `### ⚡ Performance`, `### 🐛 Fixed`, `### 🔒 Security`, `### 🧹 Deprecated`, `### 🗑️ Removed` and `### 📚 Documentation`.
 
+## [0.5.1] - 2026-10-26
+
+A registration refuses an address with a line break on every Laravel 13, a reset form sent twice is recognized behind a broker of the application's as well, and the mail budget counts an address with a no-break space at its edge as that address.
+
+### 🐛 Fixed
+
+- **A reset form sent twice is answered as the reset it repeats behind a broker of the application's as well.** The check that recognizes the repeat asked the broker for the account only when it was Laravel's own broker class, so a broker that implements the contract and hands the reset on to Laravel's, the usual way to send the reset mail from the queue, answered every second click as a used link. The account now comes from the broker where it can say, and from the user provider the broker's configuration names where it cannot, which is where Laravel's broker looks it up.
+- **`Support\Mailbox::of()` drops a no-break space at either end of an address.** It trimmed only ASCII whitespace, so an address copied with a no-break space or an em space at its edge was counted under a key of its own and received a mail budget of its own. Whitespace of every kind is dropped at both ends now, and such a spelling shares the budget of the address.
+- **A registration that sends the address as a list is refused at the field.** With `fortify.lowercase_usernames` on, the address was written in lower case before the form request ran, and a list there ended in a server error. Only text is written in lower case now; anything else reaches the form request, whose `string` rule refuses it at the field.
+
+### 🔒 Security
+
+- **A registration refuses an address with a carriage return or a line feed on every Laravel 13.** Laravel's `email` rule lets both characters through before 13.10.0 (GHSA-5vg9-5847-vvmq), and the address goes into the headers of the mails a registration sends. The form request refuses them with a rule of its own now, so a Laravel 13 below 13.10.0 is covered as well.
+
 ## [0.5.0] - 2026-10-25
 
 The mail budget of the registration form counts the spellings of a Gmail address as one inbox, the rule it counts under is public as `Support\Mailbox::of()`, and a reset form sent twice is answered as the reset it repeats.
@@ -91,7 +105,8 @@ The first release. The package stops Laravel Fortify from revealing whether an a
 - **`AssertsEnumerationSafety`**, the assertion the package proves itself with, for an application's own suite.
 - **Switches that read what a host writes.** Each section is switched off with `false`, `0`, `no`, `off` or an empty value, in any case and with spaces around it, and any other value keeps it on.
 
-[Unreleased]: https://github.com/pushery/fortify-hardening-for-laravel/compare/v0.5.0...HEAD
+[Unreleased]: https://github.com/pushery/fortify-hardening-for-laravel/compare/v0.5.1...HEAD
+[0.5.1]: https://github.com/pushery/fortify-hardening-for-laravel/compare/v0.5.0...v0.5.1
 [0.5.0]: https://github.com/pushery/fortify-hardening-for-laravel/compare/v0.4.1...v0.5.0
 [0.4.1]: https://github.com/pushery/fortify-hardening-for-laravel/compare/v0.4.0...v0.4.1
 [0.4.0]: https://github.com/pushery/fortify-hardening-for-laravel/compare/v0.3.0...v0.4.0
