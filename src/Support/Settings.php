@@ -157,6 +157,14 @@ final readonly class Settings
         return is_string($provider) && $provider !== '' ? $provider : null;
     }
 
+    /** The application key, which keys the hashes the package puts into cache keys. Empty where none is set. */
+    public function secret(): string
+    {
+        $key = $this->config->get('app.key');
+
+        return is_string($key) ? $key : '';
+    }
+
     public function lowercasesUsernames(): bool
     {
         return $this->boolean('fortify.lowercase_usernames', false);
