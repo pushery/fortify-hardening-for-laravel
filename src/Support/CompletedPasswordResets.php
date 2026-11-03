@@ -20,10 +20,11 @@ use Laravel\Fortify\Fortify;
  *
  * A double click sends the reset form twice. The first request sets the password and the broker deletes the token,
  * so the second finds none and would be answered as a reset with an invalid token, although the password the person
- * just chose is already theirs. A completed reset is noted under its session and its address, and a refused reset is
- * answered as the one it repeats where all of this holds: the note names the session and the address, the password
- * and its confirmation agree, and the account holds exactly that password. Without the note a refused reset stays
- * neutral, so the answer tells nobody anything about an account they did not just reset themselves.
+ * just chose is already theirs. A completed reset is noted under its session and the value its account resets under,
+ * and a refused reset is answered as the one it repeats where all of this holds: the note names the session and the
+ * account the form's address leads to, the password and its confirmation agree, and the account holds exactly that
+ * password. Without the note a refused reset stays neutral, so the answer tells nobody anything about an account they
+ * did not just reset themselves.
  *
  * The note is kept in the cache rather than in the session, because the two requests run side by side and a session
  * is written only when its request ends. It is written while the broker resets, before the token is deleted, so a
@@ -53,7 +54,11 @@ final readonly class CompletedPasswordResets
     /**
      * Whether a refused reset repeats one this session completed a moment ago.
      *
-     * The same address, a password its confirmation agrees with, and the password the account now holds.
+     * The same account, a password its confirmation agrees with, and the password the account now holds.
+     *
+     * The note is looked up under the value the account resets under, the one remember() wrote it under, and not
+     * under the address of the form: an application may keep its reset tokens under another value, such as a shop's
+     * `<scope>:<address>`, and the note of such an account would never be found under the address alone.
      */
     public function repeats(Request $request): bool
     {
@@ -64,13 +69,13 @@ final readonly class CompletedPasswordResets
             return false;
         }
 
-        if ($this->cache->get($this->key($request->session()->getId(), $email)) !== true) {
+        $user = $this->user($email);
+
+        if (! $user instanceof CanResetPassword || $this->cache->get($this->key($request->session()->getId(), $user->getEmailForPasswordReset())) !== true) {
             return false;
         }
 
-        $user = $this->user($email);
-
-        return $user instanceof Authenticatable && $this->hasher->check($password, $user->getAuthPassword());
+        return $this->hasher->check($password, $user->getAuthPassword());
     }
 
     /**

@@ -33,7 +33,9 @@ use Throwable;
  * address: case, surrounding whitespace and a `+tag` in the local part reach the same inbox at most
  * providers, and so do the dots of a Gmail address, under `gmail.com` or `googlemail.com`. Each
  * spelling registers as a new address, so a budget per spelling would let one inbox receive a mail
- * for every variant. The key is a hash of that inbox, so the cache holds no address.
+ * for every variant. The key is an HMAC of that inbox under the application key, so the cache holds
+ * no address, and a guessed address cannot be hashed and looked for among the keys an error tracker
+ * or a store's monitor records.
  */
 final readonly class AddressBudget
 {
@@ -95,7 +97,7 @@ final readonly class AddressBudget
      */
     private function count(string $address, int $amount): ?int
     {
-        $key = 'fortify-hardening:registration-mail:'.hash('sha256', Mailbox::of($address));
+        $key = 'fortify-hardening:registration-mail:'.hash_hmac('sha256', Mailbox::of($address), $this->settings->secret());
         $store = $this->lockStore();
 
         if (! $store instanceof LockProvider) {

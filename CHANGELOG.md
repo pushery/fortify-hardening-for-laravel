@@ -4,6 +4,20 @@ All notable changes to `pushery/fortify-hardening-for-laravel` are documented he
 
 A release carries only the sections that have an entry, in this order: `### ⚠️ Breaking`, `### ✨ Added`, `### 🔧 Changed`, `### ⚡ Performance`, `### 🐛 Fixed`, `### 🔒 Security`, `### 🧹 Deprecated`, `### 🗑️ Removed` and `### 📚 Documentation`.
 
+## [0.5.2] - 2026-11-03
+
+The mail budget of the registration form keeps its count under a keyed hash of the inbox, and a reset form sent twice is recognized for an account that resets under another value than its address.
+
+### 🐛 Fixed
+
+- **A reset form sent twice is recognized for an account that resets under another value than its address.** The completed reset was noted under `getEmailForPasswordReset()` and looked up under the address of the form, so in an application whose accounts reset under another value, such as `<scope>:<address>` for the account of each shop, the second click was still answered as a used link. The repeat now looks the account up first and reads the note under the value that account resets under. A form with another password in the same session stays refused.
+
+### 🔒 Security
+
+- **The mail budget of the registration form keeps its count under a keyed hash of the inbox.** Its cache key was an unkeyed SHA-256 of the address, which anyone who reads cache keys, in an error tracker or a store's monitor, could match against a guessed address. It is now an HMAC under the application key, as the login limiter's key already was.
+
+  **Upgrade:** nothing to do. The counts of the running hour start again after the deploy.
+
 ## [0.5.1] - 2026-10-26
 
 A registration refuses an address with a line break on every Laravel 13, a reset form sent twice is recognized behind a broker of the application's as well, and the mail budget counts an address with a no-break space at its edge as that address.
@@ -105,7 +119,8 @@ The first release. The package stops Laravel Fortify from revealing whether an a
 - **`AssertsEnumerationSafety`**, the assertion the package proves itself with, for an application's own suite.
 - **Switches that read what a host writes.** Each section is switched off with `false`, `0`, `no`, `off` or an empty value, in any case and with spaces around it, and any other value keeps it on.
 
-[Unreleased]: https://github.com/pushery/fortify-hardening-for-laravel/compare/v0.5.1...HEAD
+[Unreleased]: https://github.com/pushery/fortify-hardening-for-laravel/compare/v0.5.2...HEAD
+[0.5.2]: https://github.com/pushery/fortify-hardening-for-laravel/compare/v0.5.1...v0.5.2
 [0.5.1]: https://github.com/pushery/fortify-hardening-for-laravel/compare/v0.5.0...v0.5.1
 [0.5.0]: https://github.com/pushery/fortify-hardening-for-laravel/compare/v0.4.1...v0.5.0
 [0.4.1]: https://github.com/pushery/fortify-hardening-for-laravel/compare/v0.4.0...v0.4.1
