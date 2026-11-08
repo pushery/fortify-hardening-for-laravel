@@ -23,8 +23,7 @@ Stops Laravel Fortify from revealing whether an account exists: neutral answers 
 
 **Full documentation at
 [docs.pushery.com/fortify-hardening-for-laravel](https://docs.pushery.com/fortify-hardening-for-laravel/).**
-This README is the quick start; the guides, the configuration reference and the
-upgrade notes live there.
+This README is the quick start; the guides and the configuration reference live there.
 
 ## Requirements
 
