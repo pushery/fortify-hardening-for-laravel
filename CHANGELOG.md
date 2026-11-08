@@ -4,6 +4,14 @@ All notable changes to `pushery/fortify-hardening-for-laravel` are documented he
 
 A release carries only the sections that have an entry, in this order: `### ⚠️ Breaking`, `### ✨ Added`, `### 🔧 Changed`, `### ⚡ Performance`, `### 🐛 Fixed`, `### 🔒 Security`, `### 🧹 Deprecated`, `### 🗑️ Removed` and `### 📚 Documentation`.
 
+## [0.6.0] - 2026-11-08
+
+### 🔒 Security
+
+- **A greeting somebody typed reaches the mail about a taken address as text.** The mail is Markdown, and a name a subclass put into its greeting, such as `[Reset your password](https://…)`, arrived as a real link. A greeting `greeting()` returns as a string is now set as text: its Markdown stays characters, and a web address in it is written so that a mail program does not link it. `greeting()` may also return an `Htmlable`, which is set as it is.
+
+  **Upgrade:** a greeting that used Markdown on purpose now shows its characters. A greeting returned as an `Htmlable` is set as it is, so one built as Markdown keeps its formatting, and what it takes from the user is then the application's to escape.
+
 ## [0.5.2] - 2026-11-03
 
 The mail budget of the registration form keeps its count under a keyed hash of the inbox, and a reset form sent twice is recognized for an account that resets under another value than its address.
@@ -119,7 +127,8 @@ The first release. The package stops Laravel Fortify from revealing whether an a
 - **`AssertsEnumerationSafety`**, the assertion the package proves itself with, for an application's own suite.
 - **Switches that read what a host writes.** Each section is switched off with `false`, `0`, `no`, `off` or an empty value, in any case and with spaces around it, and any other value keeps it on.
 
-[Unreleased]: https://github.com/pushery/fortify-hardening-for-laravel/compare/v0.5.2...HEAD
+[Unreleased]: https://github.com/pushery/fortify-hardening-for-laravel/compare/v0.6.0...HEAD
+[0.6.0]: https://github.com/pushery/fortify-hardening-for-laravel/compare/v0.5.2...v0.6.0
 [0.5.2]: https://github.com/pushery/fortify-hardening-for-laravel/compare/v0.5.1...v0.5.2
 [0.5.1]: https://github.com/pushery/fortify-hardening-for-laravel/compare/v0.5.0...v0.5.1
 [0.5.0]: https://github.com/pushery/fortify-hardening-for-laravel/compare/v0.4.1...v0.5.0

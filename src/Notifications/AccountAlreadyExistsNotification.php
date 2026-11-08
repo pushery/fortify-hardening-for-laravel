@@ -5,10 +5,12 @@ declare(strict_types=1);
 namespace Pushery\FortifyHardening\Notifications;
 
 use Illuminate\Bus\Queueable;
+use Illuminate\Contracts\Support\Htmlable;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\URL;
+use Pushery\FortifyHardening\Support\MarkdownText;
 use Pushery\FortifyHardening\Support\Settings;
 
 /**
@@ -46,7 +48,8 @@ class AccountAlreadyExistsNotification extends Notification
         $greeting = $this->greeting($notifiable);
 
         if ($greeting !== null) {
-            $mail->greeting($greeting);
+            // @phpstan-ignore argument.type (the mail view prints the greeting with {{ }}, which passes an Htmlable through as it is)
+            $mail->greeting($greeting instanceof Htmlable ? $greeting : MarkdownText::text($greeting));
         }
 
         $next = app(Settings::class)->noticeMentionsPasswordReset() ? 'next' : 'next_without_password';
@@ -69,8 +72,12 @@ class AccountAlreadyExistsNotification extends Notification
 
     /**
      * The greeting the mail opens with. Null, the default, leaves Laravel's own.
+     *
+     * The mail is Markdown, so a string is set as text: a name typed into it as a Markdown link or as a
+     * web address stays text. An Htmlable is set as it is, for a greeting the subclass builds as Markdown
+     * itself, with what it took from the user escaped, as `Support\MarkdownText` does.
      */
-    protected function greeting(object $notifiable): ?string
+    protected function greeting(object $notifiable): Htmlable|string|null
     {
         return null;
     }
