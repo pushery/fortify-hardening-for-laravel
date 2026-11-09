@@ -48,7 +48,6 @@ class AccountAlreadyExistsNotification extends Notification
         $greeting = $this->greeting($notifiable);
 
         if ($greeting !== null) {
-            // @phpstan-ignore argument.type (the mail view prints the greeting with {{ }}, which passes an Htmlable through as it is)
             $mail->greeting($greeting instanceof Htmlable ? $greeting : MarkdownText::text($greeting));
         }
 

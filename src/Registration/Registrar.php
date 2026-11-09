@@ -17,6 +17,7 @@ use Illuminate\Notifications\Notification;
 use Laravel\Fortify\Fortify;
 use Pushery\FortifyHardening\Support\AddressBudget;
 use Pushery\FortifyHardening\Support\Settings;
+use SensitiveParameter;
 
 /**
  * Registers an address without telling the caller whether it was free.
@@ -48,11 +49,13 @@ final readonly class Registrar
      *
      * The password is hashed once, before the address is looked up, and the hash is what $create
      * receives, so a free address and a taken one pay the same hash. Store it as it is: a model with
-     * the `hashed` cast leaves an existing hash alone.
+     * the `hashed` cast leaves an existing hash alone. The password is marked as sensitive, so the trace
+     * of a failure in the lookup or in $create holds a placeholder in its place, even on a server that
+     * keeps the arguments of a trace.
      *
      * @param  Closure(string): Authenticatable  $create  creates the account from the hashed password
      */
-    public function register(string $address, string $password, Closure $create): void
+    public function register(string $address, #[SensitiveParameter] string $password, Closure $create): void
     {
         $hashed = $this->hasher->make($password);
 
@@ -62,11 +65,11 @@ final readonly class Registrar
     /**
      * Register an address whose account is created by code that hashes the password itself, such
      * as Fortify's `CreatesNewUsers`. A taken address then pays one hash of the same password with
-     * the same hasher, so both outcomes cost the same.
+     * the same hasher, so both outcomes cost the same. The password is marked as sensitive, as above.
      *
      * @param  Closure(): Authenticatable  $create  creates the account
      */
-    public function registerHashingInside(string $address, string $password, Closure $create): void
+    public function registerHashingInside(string $address, #[SensitiveParameter] string $password, Closure $create): void
     {
         $this->settle($address, $create, fn (): string => $this->hasher->make($password));
     }

@@ -119,6 +119,11 @@ trait AssertsEnumerationSafety
      * over the data, and writes the component's id into its HTML. A child the update mounts carries
      * its own snapshot in an attribute of that HTML, checksum included.
      *
+     * Laravel's debug rendering of an exception adds `exception`, `file`, `line` and `trace` to the
+     * body, which production never sends, and two requests that both name nothing often fail on
+     * different paths through the code. A body that carries `exception` and `trace` is compared
+     * without those four.
+     *
      * @param  array<string, string>  $identities
      */
     private static function enumerationComparableBody(string $content, array $identities): string
@@ -127,6 +132,10 @@ trait AssertsEnumerationSafety
 
         if (! is_array($body)) {
             return strtr($content, $identities);
+        }
+
+        if (isset($body['exception'], $body['trace'])) {
+            unset($body['exception'], $body['file'], $body['line'], $body['trace']);
         }
 
         $ids = [];

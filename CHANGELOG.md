@@ -4,6 +4,22 @@ All notable changes to `pushery/fortify-hardening-for-laravel` are documented he
 
 A release carries only the sections that have an entry, in this order: `### ⚠️ Breaking`, `### ✨ Added`, `### 🔧 Changed`, `### ⚡ Performance`, `### 🐛 Fixed`, `### 🔒 Security`, `### 🧹 Deprecated`, `### 🗑️ Removed` and `### 📚 Documentation`.
 
+## [0.6.1] - 2026-11-09
+
+### 🐛 Fixed
+
+- **`assertEnumerationSafe()` compares a JSON error the way production sends it.** Laravel's debug rendering adds `exception`, `file`, `line` and `trace` to the body, and two requests that both name nothing often fail on different paths through the code, so a suite running with `APP_DEBUG=true` failed on a stack trace. A body that carries `exception` and `trace` is now compared without those four. A field of that name in any other body stays in the comparison.
+- **An e-mail address in a typed greeting keeps its characters in the mail about a taken address.** The mail sets a typed greeting as text, and it wrote the dot of a domain with a look-alike character so that no mail program would link it. An e-mail address in the greeting came out with that look-alike too, so a mail program did not offer it as an address and a copy of it was not the address that was typed. An address now stays as typed; a web address is still broken as before.
+
+### 🔒 Security
+
+- **An empty line in the `.env` keeps a hardening on.** `env()` reads `FORTIFY_HARDENING_REGISTRATION=` as an empty string, and each of the four `enabled` switches counted it as off, so a line left empty by copying a template dropped the protection of the registration, the reset link, the reset or the login keys, while a missing line kept it. Only `false`, `0`, `no` and `off` switch a section off now.
+- **The password of a registration stays out of the trace of a failure.** `Registrar::register()` and `registerHashingInside()` mark it with `#[\SensitiveParameter]`, so a failure while the address is looked up or the account is created carries a placeholder in its place. A server with `zend.exception_ignore_args` off, as `php.ini-development` sets it, kept the password in the trace, where an error tracker reads the arguments of every frame.
+
+### 📚 Documentation
+
+- **The notice to the holder of a taken address is shown on the registration page.** The image is rendered from the package itself, nothing in it drawn by hand.
+
 ## [0.6.0] - 2026-11-08
 
 ### 🔒 Security
@@ -127,7 +143,8 @@ The first release. The package stops Laravel Fortify from revealing whether an a
 - **`AssertsEnumerationSafety`**, the assertion the package proves itself with, for an application's own suite.
 - **Switches that read what a host writes.** Each section is switched off with `false`, `0`, `no`, `off` or an empty value, in any case and with spaces around it, and any other value keeps it on.
 
-[Unreleased]: https://github.com/pushery/fortify-hardening-for-laravel/compare/v0.6.0...HEAD
+[Unreleased]: https://github.com/pushery/fortify-hardening-for-laravel/compare/v0.6.1...HEAD
+[0.6.1]: https://github.com/pushery/fortify-hardening-for-laravel/compare/v0.6.0...v0.6.1
 [0.6.0]: https://github.com/pushery/fortify-hardening-for-laravel/compare/v0.5.2...v0.6.0
 [0.5.2]: https://github.com/pushery/fortify-hardening-for-laravel/compare/v0.5.1...v0.5.2
 [0.5.1]: https://github.com/pushery/fortify-hardening-for-laravel/compare/v0.5.0...v0.5.1
