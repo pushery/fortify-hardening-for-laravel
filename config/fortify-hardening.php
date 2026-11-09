@@ -19,9 +19,10 @@ return [
     | Published to config/fortify-hardening.php with
     | `php artisan vendor:publish --tag=fortify-hardening-config`.
     |
-    | A section is switched off with `false`, `0`, `no`, `off` or an empty
-    | value, in any case and with spaces around it. Any other value keeps it
-    | on, and so does a variable that is not set.
+    | A section is switched off with `false`, `0`, `no` or `off`, in any case
+    | and with spaces around it. Any other value keeps it on, and so does a
+    | variable that is not set or set to nothing, as copying a template of a
+    | .env leaves one.
     |
     | Read environment values with env() HERE and nowhere else. Outside a config
     | file env() returns null the moment the host app caches its config, so the
@@ -36,7 +37,7 @@ return [
     'password_reset_link' => [
         'enabled' => ! in_array(
             is_string($resetLink = env('FORTIFY_HARDENING_PASSWORD_RESET_LINK')) ? strtolower(trim($resetLink)) : $resetLink,
-            [false, '', '0', 'false', 'no', 'off'],
+            [false, '0', 'false', 'no', 'off'],
             true,
         ),
     ],
@@ -48,7 +49,7 @@ return [
     'password_reset' => [
         'enabled' => ! in_array(
             is_string($reset = env('FORTIFY_HARDENING_PASSWORD_RESET')) ? strtolower(trim($reset)) : $reset,
-            [false, '', '0', 'false', 'no', 'off'],
+            [false, '0', 'false', 'no', 'off'],
             true,
         ),
     ],
@@ -61,7 +62,7 @@ return [
     'registration' => [
         'enabled' => ! in_array(
             is_string($registration = env('FORTIFY_HARDENING_REGISTRATION')) ? strtolower(trim($registration)) : $registration,
-            [false, '', '0', 'false', 'no', 'off'],
+            [false, '0', 'false', 'no', 'off'],
             true,
         ),
 
@@ -129,7 +130,7 @@ return [
     'hashed_login_keys' => [
         'enabled' => ! in_array(
             is_string($hashedLoginKeys = env('FORTIFY_HARDENING_HASHED_LOGIN_KEYS')) ? strtolower(trim($hashedLoginKeys)) : $hashedLoginKeys,
-            [false, '', '0', 'false', 'no', 'off'],
+            [false, '0', 'false', 'no', 'off'],
             true,
         ),
     ],
