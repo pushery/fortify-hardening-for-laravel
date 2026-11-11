@@ -4,6 +4,12 @@ All notable changes to `pushery/fortify-hardening-for-laravel` are documented he
 
 A release carries only the sections that have an entry, in this order: `### ⚠️ Breaking`, `### ✨ Added`, `### 🔧 Changed`, `### ⚡ Performance`, `### 🐛 Fixed`, `### 🔒 Security`, `### 🧹 Deprecated`, `### 🗑️ Removed` and `### 📚 Documentation`.
 
+## [0.7.0] - 2026-11-11
+
+### 🔧 Changed
+
+- **The four switches read their rule from the package, so a fix to it reaches a published config.** `config/fortify-hardening.php` spelled out which values switch a hardening off, and a host that published the file kept that rule as it was on the day it published it. The fix of 0.6.1 for an empty `.env` line reached no such copy, and there an empty line kept switching a hardening off. The switches call `EnvSwitch::read(env('…'), true)` now, and the rule ships in `src/Support/EnvSwitch.php`: `false`, `0`, `no` and `off` switch a hardening off, trimmed and in any case, and anything else keeps it on. **Upgrade:** in a published copy, replace the expression of each of the four once with its call and import the class: `password_reset_link.enabled` with `EnvSwitch::read(env('FORTIFY_HARDENING_PASSWORD_RESET_LINK'), true)`, `password_reset.enabled` with `EnvSwitch::read(env('FORTIFY_HARDENING_PASSWORD_RESET'), true)`, `registration.enabled` with `EnvSwitch::read(env('FORTIFY_HARDENING_REGISTRATION'), true)`, `hashed_login_keys.enabled` with `EnvSwitch::read(env('FORTIFY_HARDENING_HASHED_LOGIN_KEYS'), true)`, and `use Pushery\FortifyHardening\Support\EnvSwitch;` at the top.
+
 ## [0.6.1] - 2026-11-09
 
 ### 🐛 Fixed
@@ -143,7 +149,8 @@ The first release. The package stops Laravel Fortify from revealing whether an a
 - **`AssertsEnumerationSafety`**, the assertion the package proves itself with, for an application's own suite.
 - **Switches that read what a host writes.** Each section is switched off with `false`, `0`, `no`, `off` or an empty value, in any case and with spaces around it, and any other value keeps it on.
 
-[Unreleased]: https://github.com/pushery/fortify-hardening-for-laravel/compare/v0.6.1...HEAD
+[Unreleased]: https://github.com/pushery/fortify-hardening-for-laravel/compare/v0.7.0...HEAD
+[0.7.0]: https://github.com/pushery/fortify-hardening-for-laravel/compare/v0.6.1...v0.7.0
 [0.6.1]: https://github.com/pushery/fortify-hardening-for-laravel/compare/v0.6.0...v0.6.1
 [0.6.0]: https://github.com/pushery/fortify-hardening-for-laravel/compare/v0.5.2...v0.6.0
 [0.5.2]: https://github.com/pushery/fortify-hardening-for-laravel/compare/v0.5.1...v0.5.2

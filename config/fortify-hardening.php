@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Pushery\FortifyHardening\Http\Requests\RegistrationRequest;
 use Pushery\FortifyHardening\Notifications\AccountAlreadyExistsNotification;
+use Pushery\FortifyHardening\Support\EnvSwitch;
 
 return [
 
@@ -35,11 +36,7 @@ return [
     | asked too recently, exactly as it answers a link that was sent.
     */
     'password_reset_link' => [
-        'enabled' => ! in_array(
-            is_string($resetLink = env('FORTIFY_HARDENING_PASSWORD_RESET_LINK')) ? strtolower(trim($resetLink)) : $resetLink,
-            [false, '0', 'false', 'no', 'off'],
-            true,
-        ),
+        'enabled' => EnvSwitch::read(env('FORTIFY_HARDENING_PASSWORD_RESET_LINK'), true),
     ],
 
     /*
@@ -47,11 +44,7 @@ return [
     | known address whose token is wrong or expired.
     */
     'password_reset' => [
-        'enabled' => ! in_array(
-            is_string($reset = env('FORTIFY_HARDENING_PASSWORD_RESET')) ? strtolower(trim($reset)) : $reset,
-            [false, '0', 'false', 'no', 'off'],
-            true,
-        ),
+        'enabled' => EnvSwitch::read(env('FORTIFY_HARDENING_PASSWORD_RESET'), true),
     ],
 
     /*
@@ -60,11 +53,7 @@ return [
     | gets the notice below instead.
     */
     'registration' => [
-        'enabled' => ! in_array(
-            is_string($registration = env('FORTIFY_HARDENING_REGISTRATION')) ? strtolower(trim($registration)) : $registration,
-            [false, '0', 'false', 'no', 'off'],
-            true,
-        ),
+        'enabled' => EnvSwitch::read(env('FORTIFY_HARDENING_REGISTRATION'), true),
 
         // The form request that validates a registration before the address is
         // looked up. It must not carry a `unique` rule on the address, and its
@@ -128,11 +117,7 @@ return [
     | it on or off start again.
     */
     'hashed_login_keys' => [
-        'enabled' => ! in_array(
-            is_string($hashedLoginKeys = env('FORTIFY_HARDENING_HASHED_LOGIN_KEYS')) ? strtolower(trim($hashedLoginKeys)) : $hashedLoginKeys,
-            [false, '0', 'false', 'no', 'off'],
-            true,
-        ),
+        'enabled' => EnvSwitch::read(env('FORTIFY_HARDENING_HASHED_LOGIN_KEYS'), true),
     ],
 
 ];
