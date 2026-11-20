@@ -30,7 +30,13 @@ final readonly class NeutralPasswordResetResponse implements FailedPasswordReset
 {
     public function __construct(private CompletedPasswordResets $resets) {}
 
-    /** @param  Request  $request */
+    /**
+     * @param  mixed  $request  the request, which the contract of a response leaves untyped
+     *
+     * @phpstan-param  Request  $request
+     *
+     * @return mixed the response, which the contract leaves untyped: Laravel's, Inertia's or the application's own
+     */
     #[Override]
     public function toResponse(mixed $request): mixed
     {

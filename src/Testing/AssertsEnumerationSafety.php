@@ -157,7 +157,7 @@ trait AssertsEnumerationSafety
                 $effects = $component['effects'] ?? null;
 
                 if (is_array($effects)) {
-                    array_walk_recursive($effects, static function (mixed &$leaf): void {
+                    array_walk_recursive($effects, static function (string|int|float|bool|null &$leaf): void {
                         if (is_string($leaf)) {
                             $leaf = preg_replace('/(&quot;|")checksum\1:\1[0-9a-f]{64}\1/', '$1checksum$1:$1<checksum>$1', $leaf) ?? $leaf;
                         }
@@ -180,6 +180,7 @@ trait AssertsEnumerationSafety
     /**
      * The ids a snapshot's memo names: the component's own, and those of the children it tracks.
      *
+     * @param  mixed  $memo  the memo of a snapshot as Livewire encoded it, which may hold any JSON value
      * @return list<string>
      */
     private static function enumerationComponentIds(mixed $memo): array
@@ -216,7 +217,7 @@ trait AssertsEnumerationSafety
      */
     private static function enumerationReplacedIn(array $value, array $replacements): array
     {
-        array_walk_recursive($value, static function (mixed &$leaf) use ($replacements): void {
+        array_walk_recursive($value, static function (string|int|float|bool|null &$leaf) use ($replacements): void {
             if (is_string($leaf)) {
                 $leaf = strtr($leaf, $replacements);
             }

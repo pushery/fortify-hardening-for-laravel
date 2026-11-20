@@ -23,10 +23,11 @@ use Pushery\FortifyHardening\Support\Settings;
 /**
  * Fortify's registration endpoint, without the answers that tell a free address from a taken one.
  *
- * The package binds this class in place of Fortify's controller, so Fortify's own route reaches it.
- * The request is validated first, for every address, by the configured form request. Only then is
- * the address looked up: a free one is created by the application's `CreatesNewUsers` action, a taken
- * one is not, and either way the answer is `RegistrationAccepted` and nobody is signed in.
+ * The package binds this class in place of Fortify's controller where people sign in with their address,
+ * so Fortify's own route reaches it. The request is validated first, for every address, by the
+ * configured form request. Only then is the address looked up: a free one is created by the
+ * application's `CreatesNewUsers` action, a taken one is not, and either way the answer is
+ * `RegistrationAccepted` and nobody is signed in.
  */
 final class EnumerationSafeRegisteredUserController extends RegisteredUserController
 {

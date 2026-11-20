@@ -6,7 +6,6 @@ namespace Pushery\FortifyHardening\Support;
 
 use Illuminate\Auth\AuthManager;
 use Illuminate\Contracts\Auth\Authenticatable;
-use Illuminate\Contracts\Auth\CanResetPassword;
 use Illuminate\Contracts\Auth\PasswordBrokerFactory;
 use Illuminate\Contracts\Cache\Repository as Cache;
 use Illuminate\Contracts\Config\Repository as Config;
@@ -20,15 +19,25 @@ use Laravel\Fortify\Fortify;
  *
  * A double click sends the reset form twice. The first request sets the password and the broker deletes the token,
  * so the second finds none and would be answered as a reset with an invalid token, although the password the person
- * just chose is already theirs. A completed reset is noted under its session and the value its account resets under,
- * and a refused reset is answered as the one it repeats where all of this holds: the note names the session and the
- * account the form's address leads to, the password and its confirmation agree, and the account holds exactly that
+ * just chose is already theirs. A completed reset is noted under its session and the address its form named, and a
+ * refused reset is answered as the one it repeats where all of this holds: the note names the session and the address
+ * of the form, the password and its confirmation agree, and the account that address leads to holds exactly that
  * password. Without the note a refused reset stays neutral, so the answer tells nobody anything about an account they
  * did not just reset themselves.
+ *
+ * The note is looked up before any account is read. A refused reset is answered after the broker's minimum duration
+ * has ended, so work that only an address with an account costs would show in the time of the answer. Keyed by what
+ * the request itself carries, the lookup is one cache read for any address, and an account is read only in a session
+ * that reset the address of its form a moment ago.
  *
  * The note is kept in the cache rather than in the session, because the two requests run side by side and a session
  * is written only when its request ends. It is written while the broker resets, before the token is deleted, so a
  * second request that finds the token gone finds the note.
+ *
+ * Its key is an HMAC of the session id and the address under the application key. A session the `redis`, `memcached`
+ * or `dynamodb` driver keeps stands in a cache store under its bare id, among the keys an error tracker or a store's
+ * monitor records, and an unkeyed hash of the two would let whoever reads those keys try a guessed address against
+ * every session.
  */
 final readonly class CompletedPasswordResets
 {
@@ -41,24 +50,31 @@ final readonly class CompletedPasswordResets
         private PasswordBrokerFactory $brokers,
         private Config $config,
         private AuthManager $auth,
+        private Settings $settings,
     ) {}
 
-    /** Note that the password of this account was reset in the session of this request. */
-    public function remember(Request $request, CanResetPassword $user): void
+    /**
+     * Note that the reset form of this request completed a reset, under its session and the address it named.
+     *
+     * A reset made without such a form, by a form of the application's that names no address or outside a request,
+     * is not noted: no reset form can repeat it.
+     */
+    public function remember(Request $request): void
     {
-        if ($request->hasSession()) {
-            $this->cache->put($this->key($request->session()->getId(), $user->getEmailForPasswordReset()), true, self::REPEAT_WINDOW_SECONDS);
+        $email = $request->input(Fortify::email());
+
+        if ($request->hasSession() && is_string($email)) {
+            $this->cache->put($this->key($request->session()->getId(), $email), true, self::REPEAT_WINDOW_SECONDS);
         }
     }
 
     /**
      * Whether a refused reset repeats one this session completed a moment ago.
      *
-     * The same account, a password its confirmation agrees with, and the password the account now holds.
-     *
-     * The note is looked up under the value the account resets under, the one remember() wrote it under, and not
-     * under the address of the form: an application may keep its reset tokens under another value, such as a shop's
-     * `<scope>:<address>`, and the note of such an account would never be found under the address alone.
+     * The same address, a password its confirmation agrees with, and the password the account that address leads to
+     * now holds. The note is written and read under the address of the form, which both requests of a double click
+     * carry alike, also where an application keeps its reset tokens under another value, such as a shop's
+     * `<scope>:<address>`.
      */
     public function repeats(Request $request): bool
     {
@@ -69,13 +85,13 @@ final readonly class CompletedPasswordResets
             return false;
         }
 
-        $user = $this->user($email);
-
-        if (! $user instanceof CanResetPassword || $this->cache->get($this->key($request->session()->getId(), $user->getEmailForPasswordReset())) !== true) {
+        if ($this->cache->get($this->key($request->session()->getId(), $email)) !== true) {
             return false;
         }
 
-        return $this->hasher->check($password, $user->getAuthPassword());
+        $user = $this->user($email);
+
+        return $user instanceof Authenticatable && $this->hasher->check($password, $user->getAuthPassword());
     }
 
     /**
@@ -106,10 +122,10 @@ final readonly class CompletedPasswordResets
         return is_string($provider) ? $provider : null;
     }
 
-    /** The cache key of a session and an address, hashed so the cache holds neither. */
+    /** The cache key of a session and an address, an HMAC under the application key, so the cache holds neither and a guess cannot be hashed to find it. */
     private function key(string $session, string $email): string
     {
-        return 'fortify-hardening:password-reset:'.hash('sha256', $session.'|'.Str::lower($email));
+        return 'fortify-hardening:password-reset:'.hash_hmac('sha256', $session.'|'.Str::lower($email), $this->settings->secret());
     }
 
     /** The broker Fortify resets with, as its configuration names it. */

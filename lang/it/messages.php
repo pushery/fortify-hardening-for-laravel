@@ -11,7 +11,8 @@ return [
         'subject' => 'Qualcuno ha provato a registrarsi su :app con il tuo indirizzo email',
         'attempt' => 'Qualcuno ha provato a creare un account con questo indirizzo email, ma ne hai già uno.',
         'action' => 'Accedi',
-        'next' => 'Se sei stato tu e hai dimenticato la password, puoi reimpostarla dalla pagina di accesso. Se non sei stato tu, non devi fare nulla.',
-        'next_without_password' => 'Se sei stato tu, puoi accedere dalla pagina di accesso. Se non sei stato tu, non devi fare nulla.',
+        'next' => 'Se sei stato tu e hai dimenticato la password, puoi reimpostarla dalla pagina di accesso.',
+        'next_without_password' => 'Se sei stato tu, puoi accedere dalla pagina di accesso.',
+        'not_you' => 'Se non sei stato tu, non devi fare nulla.',
     ],
 ];

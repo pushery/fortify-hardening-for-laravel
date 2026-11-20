@@ -45,6 +45,13 @@ class AccountAlreadyExistsNotification extends Notification
         $mail = new MailMessage()
             ->subject($this->line('fortify-hardening::messages.notice.subject', ['app' => $this->applicationName($notifiable)]));
 
+        // Laravel's mail header shows Laravel's logo from laravel.com in place of an application name that reads
+        // exactly `Laravel`. Under that name the notice renders through a template of its own whose header keeps the
+        // name; every other name keeps Laravel's template, and with it what the application published of it.
+        if ($this->showsLaravelsLogo()) {
+            $mail->markdown('fortify-hardening::mail.notice');
+        }
+
         $greeting = $this->greeting($notifiable);
 
         if ($greeting !== null) {
@@ -56,7 +63,10 @@ class AccountAlreadyExistsNotification extends Notification
         return $mail
             ->line($this->line('fortify-hardening::messages.notice.attempt'))
             ->action($this->line('fortify-hardening::messages.notice.action'), $this->signInUrl())
-            ->line($this->line("fortify-hardening::messages.notice.{$next}"));
+            ->line($this->line("fortify-hardening::messages.notice.{$next}"))
+            // A paragraph of its own: the line above is for the holder who tried, this one for everybody
+            // else, and as one paragraph the second case ran on into the first.
+            ->line($this->line('fortify-hardening::messages.notice.not_you'));
     }
 
     /**
@@ -79,6 +89,14 @@ class AccountAlreadyExistsNotification extends Notification
     protected function greeting(object $notifiable): Htmlable|string|null
     {
         return null;
+    }
+
+    /** Whether Laravel's mail header would show its logo for the application's name, as it does for `Laravel`. */
+    private function showsLaravelsLogo(): bool
+    {
+        $name = config('app.name');
+
+        return is_string($name) && trim($name) === 'Laravel';
     }
 
     private function signInUrl(): string

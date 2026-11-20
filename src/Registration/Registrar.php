@@ -6,14 +6,18 @@ namespace Pushery\FortifyHardening\Registration;
 
 use Closure;
 use Illuminate\Auth\AuthManager;
+use Illuminate\Auth\EloquentUserProvider;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Contracts\Container\Container;
 use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Contracts\Hashing\Hasher;
+use Illuminate\Database\ConnectionInterface;
+use Illuminate\Database\ConnectionResolverInterface;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Notifications\AnonymousNotifiable;
 use Illuminate\Notifications\Notification;
+use Illuminate\Support\Timebox;
 use Laravel\Fortify\Fortify;
 use Pushery\FortifyHardening\Support\AddressBudget;
 use Pushery\FortifyHardening\Support\Settings;
@@ -32,6 +36,11 @@ use SensitiveParameter;
  * one does not, so without that a free address would take a whole bcrypt hash longer to answer than
  * a taken one, about a quarter of a second at bcrypt's default cost of 12 rounds, and one request
  * would tell them apart.
+ *
+ * A free address costs more than its hash all the same: the creator queries and inserts, and may
+ * create more than the account, and the application's `Registered` listeners run for it alone. So
+ * both outcomes also run inside one timebox, held to the minimum the guard holds a failed sign-in to,
+ * `auth.timebox_duration`, and neither returns early. Work that runs past that minimum shows again.
  */
 final readonly class Registrar
 {
@@ -75,10 +84,25 @@ final readonly class Registrar
     }
 
     /**
+     * Settle a registration inside the timebox, which neither outcome leaves early.
+     *
      * @param  Closure(): Authenticatable  $create
      * @param  (Closure(): string)|null  $equalize  the hash a taken address pays when $create pays its own
      */
     private function settle(string $address, Closure $create, ?Closure $equalize = null): void
+    {
+        new Timebox()->call(function () use ($address, $create, $equalize): void {
+            $this->createOrNotify($address, $create, $equalize);
+        }, $this->settings->guardTimeboxMicroseconds());
+    }
+
+    /**
+     * Create the account of a free address, or tell the holder of a taken one.
+     *
+     * @param  Closure(): Authenticatable  $create
+     * @param  (Closure(): string)|null  $equalize  the hash a taken address pays when $create pays its own
+     */
+    private function createOrNotify(string $address, Closure $create, ?Closure $equalize): void
     {
         $account = $this->find($address);
 
@@ -93,25 +117,65 @@ final readonly class Registrar
         }
 
         try {
-            $created = $create();
+            $created = $this->create($create); // savepoint-ok: create() runs the insert in a savepoint wherever a transaction is open
         } catch (UniqueConstraintViolationException|AddressTurnedOutTaken) {
-            // The account exists, the winner of the race created it. Routed by address rather than
-            // looked up again: on PostgreSQL a constraint violation aborts the surrounding
-            // transaction, and any further query on the connection would fail louder than the race.
+            // The account exists, the winner of the race created it, and its holder is told by address. The failed
+            // insert took nothing else with it: create() ran it in a savepoint wherever a transaction was open, so the
+            // statements that follow, the mail budget's among them, run on a connection that still answers.
             $this->notify($address, null);
 
             return;
         }
 
-        $this->budget->spend($address);
+        // Over the budget the new account's verification mail stays back, as the notice to a holder does. The
+        // event still goes out, because the application's other listeners are owed it, and the mail is stopped
+        // on its way.
+        if (! $this->budget->spend($address)) {
+            $this->budget->holdVerification($created);
+        }
+
         $this->events->dispatch(new Registered($created));
     }
 
+    /**
+     * Run the creator, inside a savepoint wherever a transaction is open on the connection the accounts live on.
+     *
+     * The creator of a request that loses the race for an address fails at the unique index. PostgreSQL then aborts
+     * the transaction around the failed statement, and every later statement in it fails as well: the notice, the mail
+     * budget on the database cache store, and whatever the application does after the registration. A savepoint takes
+     * the failed insert back alone, as Laravel's own createOrFirst() does. Outside a transaction the insert is a
+     * statement of its own, and nothing else is there to lose.
+     *
+     * @param  Closure(): Authenticatable  $create
+     */
+    private function create(Closure $create): Authenticatable
+    {
+        $connection = $this->accountConnection();
+
+        return $connection->transactionLevel() > 0
+            ? $connection->transaction(static fn (): Authenticatable => $create())
+            : $create();
+    }
+
+    /** The connection the accounts live on: the one the model of an Eloquent user provider queries, or the default one. */
+    private function accountConnection(): ConnectionInterface
+    {
+        $provider = $this->auth->createUserProvider($this->settings->userProvider());
+
+        return $provider instanceof EloquentUserProvider
+            ? $provider->createModel()->getConnection()
+            : $this->container->make(ConnectionResolverInterface::class)->connection();
+    }
+
+    /**
+     * The account of an address, found where Fortify's password reset finds it: under `fortify.email`, which
+     * is also the field people sign in with unless they sign in with a username of their own.
+     */
     private function find(string $address): ?Authenticatable
     {
         return $this->auth
             ->createUserProvider($this->settings->userProvider())
-            ?->retrieveByCredentials([Fortify::username() => $address]);
+            ?->retrieveByCredentials([Fortify::email() => $address]);
     }
 
     private function notify(string $address, ?Authenticatable $account): void
