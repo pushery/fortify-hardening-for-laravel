@@ -6,6 +6,7 @@ namespace Pushery\FortifyHardening\Support;
 
 use Closure;
 use Illuminate\Cache\RateLimiter;
+use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Contracts\Cache\Factory;
 use Illuminate\Contracts\Cache\LockProvider;
 use Illuminate\Contracts\Cache\LockTimeoutException;
@@ -23,6 +24,14 @@ use Throwable;
  * Both outcomes spend from it, the verification mail of a new account included. If only the notice
  * counted, the second of two quick requests would tell the outcomes apart by its time: held back for
  * an address that was taken, sent for one the first request had only just registered.
+ *
+ * Over the budget the verification mail stays back as the notice does. Laravel sends it from a
+ * listener of `Registered`, an event the application's other listeners are owed, so the event still
+ * goes out and the mail is stopped on its way: the registrar notes the new account here, and the
+ * package's listener on `NotificationSending` stops the account's next verification mail. The note is
+ * kept in the store the count lives in, for the hour of the budget, so a verification mail sent from
+ * a queue worker is held back there as well. The first verification mail takes the note, so a link
+ * the person asks for again later goes out.
  *
  * A mail is counted before it is sent, under a lock per address, so requests that arrive together
  * cannot all read an unspent budget and all send. The lock is taken in the store the count lives
@@ -60,15 +69,7 @@ final readonly class AddressBudget
      */
     public function send(string $address, Closure $send): bool
     {
-        $count = $this->count($address, 1);
-
-        if ($count === null) {
-            return false;
-        }
-
-        if ($count > $this->settings->maxMailsPerHour()) {
-            $this->count($address, -1);
-
+        if (! $this->spend($address)) {
             return false;
         }
 
@@ -84,11 +85,54 @@ final readonly class AddressBudget
     }
 
     /**
-     * Count a mail that goes out another way, such as the verification link of a new account.
+     * Count a mail that goes out another way, such as the verification link of a new account, and say
+     * whether it fits the budget. A mail that does not, or one whose address could not be counted, is
+     * not counted, and holding it back is the caller's part.
      */
-    public function spend(string $address): void
+    public function spend(string $address): bool
     {
-        $this->count($address, 1);
+        $count = $this->count($address, 1);
+
+        if ($count === null) {
+            return false;
+        }
+
+        if ($count > $this->settings->maxMailsPerHour()) {
+            $this->count($address, -1);
+
+            return false;
+        }
+
+        return true;
+    }
+
+    /**
+     * Hold back the next verification mail of an account the registrar created over the budget.
+     */
+    public function holdVerification(Authenticatable $account): void
+    {
+        $this->caches->store($this->settings->limiterStore())->put($this->verificationKey($account), true, self::WINDOW_SECONDS);
+    }
+
+    /**
+     * Whether the verification mail of an account is held back. Answering takes the note, so only the
+     * first verification mail after the registration is held.
+     */
+    public function takesVerification(Authenticatable $account): bool
+    {
+        return $this->caches->store($this->settings->limiterStore())->pull($this->verificationKey($account)) === true;
+    }
+
+    /**
+     * The key of the note that holds an account's verification mail back: an HMAC of its class and its
+     * identifier under the application key, which a queue worker computes again from the account it
+     * restores.
+     */
+    private function verificationKey(Authenticatable $account): string
+    {
+        $identity = $account::class.'|'.json_encode($account->getAuthIdentifier(), JSON_THROW_ON_ERROR);
+
+        return 'fortify-hardening:held-verification:'.hash_hmac('sha256', $identity, $this->settings->secret());
     }
 
     /**

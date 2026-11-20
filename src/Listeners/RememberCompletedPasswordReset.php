@@ -12,8 +12,9 @@ use Pushery\FortifyHardening\Support\CompletedPasswordResets;
 /**
  * Notes a completed password reset for the session that made it, so the same form sent again reads as that reset.
  *
- * Laravel announces the reset while the broker still holds the token, so the note exists before a second request can
- * find the token gone.
+ * Laravel defines the event and Fortify dispatches it: its `CompletePasswordReset` runs inside the closure that
+ * `NewPasswordController` hands `PasswordBroker::reset()`, and the broker deletes the token only once that closure has
+ * returned. So the note exists before a second request can find the token gone.
  */
 final readonly class RememberCompletedPasswordReset
 {
@@ -25,7 +26,7 @@ final readonly class RememberCompletedPasswordReset
     public function handle(PasswordReset $event): void
     {
         if ($event->user instanceof CanResetPassword) {
-            $this->resets->remember($this->request, $event->user);
+            $this->resets->remember($this->request);
         }
     }
 }

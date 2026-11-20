@@ -11,7 +11,8 @@ return [
         'subject' => 'Iemand probeerde zich bij :app te registreren met je e-mailadres',
         'attempt' => 'Iemand probeerde een account aan te maken met dit e-mailadres, maar je hebt er al een.',
         'action' => 'Inloggen',
-        'next' => 'Was jij dat en ben je je wachtwoord vergeten, dan kun je het opnieuw instellen via de inlogpagina. Was jij het niet, dan hoef je niets te doen.',
-        'next_without_password' => 'Was jij dat, dan kun je inloggen via de inlogpagina. Was jij het niet, dan hoef je niets te doen.',
+        'next' => 'Was jij dat en ben je je wachtwoord vergeten, dan kun je het opnieuw instellen via de inlogpagina.',
+        'next_without_password' => 'Was jij dat, dan kun je inloggen via de inlogpagina.',
+        'not_you' => 'Was jij het niet, dan hoef je niets te doen.',
     ],
 ];

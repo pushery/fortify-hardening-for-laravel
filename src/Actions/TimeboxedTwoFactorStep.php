@@ -4,11 +4,11 @@ declare(strict_types=1);
 
 namespace Pushery\FortifyHardening\Actions;
 
-use Illuminate\Contracts\Config\Repository;
 use Illuminate\Http\Request;
 use Illuminate\Support\Timebox;
 use Laravel\Fortify\Contracts\RedirectsIfTwoFactorAuthenticatable;
 use Override;
+use Pushery\FortifyHardening\Support\Settings;
 
 /**
  * Fortify's two-factor step of the sign-in, held to the minimum duration the guard reads.
@@ -24,36 +24,34 @@ use Override;
  */
 final readonly class TimeboxedTwoFactorStep implements RedirectsIfTwoFactorAuthenticatable
 {
-    /**
-     * Laravel's own minimum, which the guard falls back to when `auth.timebox_duration` is unset.
-     */
-    private const int LARAVEL_MICROSECONDS = 200_000;
-
     public function __construct(
         private RedirectsIfTwoFactorAuthenticatable $step,
-        private Repository $config,
+        private Settings $settings,
     ) {}
 
     /**
-     * @param  Request  $request
-     * @param  callable  $next
+     * @param  mixed  $request  the request, which Fortify's pipeline hands a step untyped
+     * @param  mixed  $next  the rest of the pipeline, which Fortify hands a step untyped
+     *
+     * @phpstan-param  Request  $request
+     * @phpstan-param  callable  $next
+     *
+     * @return mixed what the rest of the pipeline returns, which Fortify leaves untyped
      */
     #[Override]
     public function handle(mixed $request, mixed $next): mixed
     {
-        return new Timebox()->call(function (Timebox $timebox) use ($request, $next): mixed {
+        $response = null;
+
+        // The step's answer leaves the timebox through $response, so the callback declares no type of
+        // its own: a sign-in that goes through returns at once, and a failure waits out the minimum and
+        // is thrown again, as Timebox::call() does with what the callback throws.
+        new Timebox()->call(function (Timebox $timebox) use ($request, $next, &$response): void {
             $response = $this->step->handle($request, $next);
 
             $timebox->returnEarly();
+        }, $this->settings->guardTimeboxMicroseconds());
 
-            return $response;
-        }, $this->microseconds());
-    }
-
-    private function microseconds(): int
-    {
-        $value = $this->config->get('auth.timebox_duration');
-
-        return is_int($value) && $value >= 0 ? $value : self::LARAVEL_MICROSECONDS;
+        return $response;
     }
 }

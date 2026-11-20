@@ -21,6 +21,9 @@ final readonly class Settings
 
     public const int DEFAULT_TIMEBOX_MICROSECONDS = 1_000_000;
 
+    /** The minimum Laravel's guard falls back to when `auth.timebox_duration` is unset. */
+    public const int LARAVEL_TIMEBOX_MICROSECONDS = 200_000;
+
     public function __construct(private Repository $config) {}
 
     public function neutralizesPasswordResetLink(): bool
@@ -118,14 +121,32 @@ final readonly class Settings
     }
 
     /**
-     * The minimum duration, in microseconds, of a failed sign-in, a reset-link request and a failed
-     * password reset, or 0 to leave Laravel's own in place.
+     * The minimum duration, in microseconds, of a failed sign-in, a reset-link request, a failed
+     * password reset and a registration, or 0 to leave Laravel's own in place.
      */
     public function timeboxMicroseconds(): int
     {
         $value = $this->config->get('fortify-hardening.timebox.microseconds');
 
         return is_int($value) && $value >= 0 ? $value : self::DEFAULT_TIMEBOX_MICROSECONDS;
+    }
+
+    /**
+     * The minimum duration, in microseconds, the guard holds a failed sign-in to: `auth.timebox_duration`,
+     * which the package raises to the value above unless the application sets it, or Laravel's own where
+     * it is unset or holds no duration.
+     */
+    public function guardTimeboxMicroseconds(): int
+    {
+        return $this->guardTimeboxAsSet() ?? self::LARAVEL_TIMEBOX_MICROSECONDS;
+    }
+
+    /**
+     * Whether `auth.timebox_duration` holds a duration, which the package then leaves as it is.
+     */
+    public function guardTimeboxIsSet(): bool
+    {
+        return $this->guardTimeboxAsSet() !== null;
     }
 
     /**
@@ -168,6 +189,36 @@ final readonly class Settings
     public function lowercasesUsernames(): bool
     {
         return $this->boolean('fortify.lowercase_usernames', false);
+    }
+
+    /**
+     * Whether people sign in with their address: `fortify.username` names the field `fortify.email` names, the
+     * one Fortify's password reset finds an account under. With a username of its own, a registration carries
+     * two values that can each be taken.
+     */
+    public function signsInWithTheAddress(): bool
+    {
+        return $this->string('fortify.username', 'email') === $this->string('fortify.email', 'email');
+    }
+
+    /**
+     * `auth.timebox_duration` as a whole number of microseconds, or null where it holds none.
+     *
+     * An application sets the key in its own `config/auth.php`, usually from `env()`, which hands a
+     * number over as text. Laravel's guard and password broker take a string of digits as the number it
+     * spells, so it is read as that number here as well.
+     */
+    private function guardTimeboxAsSet(): ?int
+    {
+        $value = $this->config->get('auth.timebox_duration');
+
+        if (is_int($value)) {
+            return $value >= 0 ? $value : null;
+        }
+
+        // Whitespace around the digits is accepted, a line feed at the end included, which `\s*` takes
+        // before `$`: the guard's integer parameter reads such a string as the number it spells.
+        return is_string($value) && preg_match('/^\s*\d+\s*$/', $value) === 1 ? (int) $value : null;
     }
 
     private function boolean(string $key, bool $default): bool

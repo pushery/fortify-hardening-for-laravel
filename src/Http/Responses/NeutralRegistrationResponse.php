@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Pushery\FortifyHardening\Http\Responses;
 
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Illuminate\Routing\Redirector;
 use Illuminate\Routing\Router;
 use Override;
@@ -27,6 +28,13 @@ final readonly class NeutralRegistrationResponse implements RegistrationAccepted
         private Settings $settings,
     ) {}
 
+    /**
+     * @param  mixed  $request  the request, which the contract of a response leaves untyped
+     *
+     * @phpstan-param  Request  $request
+     *
+     * @return mixed the response, which the contract leaves untyped: Laravel's, Inertia's or the application's own
+     */
     #[Override]
     public function toResponse(mixed $request): mixed
     {

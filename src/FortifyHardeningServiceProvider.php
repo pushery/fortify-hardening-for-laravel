@@ -10,19 +10,23 @@ use Illuminate\Contracts\Container\Container;
 use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Contracts\Foundation\CachesConfiguration;
 use Illuminate\Contracts\Translation\Loader;
+use Illuminate\Notifications\Events\NotificationSending;
 use Illuminate\Support\ServiceProvider;
+use Laravel\Fortify\Actions\AttemptToAuthenticate;
 use Laravel\Fortify\Contracts\FailedPasswordResetLinkRequestResponse;
 use Laravel\Fortify\Contracts\FailedPasswordResetResponse;
 use Laravel\Fortify\Contracts\RedirectsIfTwoFactorAuthenticatable;
 use Laravel\Fortify\Http\Controllers\RegisteredUserController;
 use Laravel\Fortify\LoginRateLimiter;
 use Override;
+use Pushery\FortifyHardening\Actions\TimeboxedSignInStep;
 use Pushery\FortifyHardening\Actions\TimeboxedTwoFactorStep;
 use Pushery\FortifyHardening\Contracts\RegistrationAccepted;
 use Pushery\FortifyHardening\Http\Controllers\EnumerationSafeRegisteredUserController;
 use Pushery\FortifyHardening\Http\Responses\NeutralPasswordResetLinkResponse;
 use Pushery\FortifyHardening\Http\Responses\NeutralPasswordResetResponse;
 use Pushery\FortifyHardening\Http\Responses\NeutralRegistrationResponse;
+use Pushery\FortifyHardening\Listeners\HoldBackVerificationMail;
 use Pushery\FortifyHardening\Listeners\RememberCompletedPasswordReset;
 use Pushery\FortifyHardening\Support\HashedLoginRateLimiter;
 use Pushery\FortifyHardening\Support\LanguageFallbackLoader;
@@ -31,10 +35,23 @@ use Pushery\FortifyHardening\Support\Settings;
 /**
  * Puts the package's answers in place of Fortify's, and ships its configuration and translations.
  *
- * The package adds no table, no route and no view: it changes what Fortify's own routes answer.
+ * The package adds no table and no route: it changes what Fortify's own routes answer. Its one view is
+ * the mail template the notice to the holder of a taken address uses in an application named Laravel.
  */
 final class FortifyHardeningServiceProvider extends ServiceProvider
 {
+    /**
+     * The sections of the config that are catalogs, as dotted paths from the config key: maps whose
+     * keys the host chooses, one entry per plan, per document or per signing key. A key that a
+     * published catalog leaves out was removed by the host rather than added by a later release, so
+     * the merge takes a published catalog as it stands. A catalog the host never published arrives
+     * whole from the default. A package lists such a section here, for example
+     * 'fortify-hardening.plans'.
+     *
+     * @var list<string>
+     */
+    private const array CATALOG_SECTIONS = [];
+
     #[Override]
     public function register(): void
     {
@@ -52,10 +69,17 @@ final class FortifyHardeningServiceProvider extends ServiceProvider
     public function boot(): void
     {
         $this->loadTranslationsFrom(__DIR__.'/../lang', 'fortify-hardening');
+        $this->loadViewsFrom(__DIR__.'/../resources/views', 'fortify-hardening');
 
         $this->bindInPlaceOfFortify();
 
-        $this->holdTheTwoFactorStepToTheTimebox();
+        $this->holdTheSignInStepsToTheTimebox();
+
+        // The verification mail of an account the registrar created over the mail budget is stopped as it is
+        // about to be sent, in the request or in the queue worker that sends it. Listened to whether or not the
+        // registration on Fortify's route is switched on, since a controller of the application's own calls the
+        // registrar as well.
+        $this->app->make(Dispatcher::class)->listen(NotificationSending::class, HoldBackVerificationMail::class);
 
         if ($this->app->runningInConsole()) {
             $this->registerPublishing();
@@ -68,29 +92,37 @@ final class FortifyHardeningServiceProvider extends ServiceProvider
      *
      * Laravel reads `auth.timebox_duration` when it builds a guard or a password broker, and a
      * provider may build one while it boots, so the value is in place before the first provider
-     * boots. A host whose configuration is cached gets the value the cache was built with.
+     * boots. A host whose configuration is cached gets the value the cache was built with. A
+     * minimum the application reads from `env()` arrives as a string of digits, and Laravel takes
+     * it as the number it spells, so it counts as set and stays.
      */
     private function raiseTheTimebox(): void
     {
         $repository = $this->app->make(Repository::class);
-        $microseconds = new Settings($repository)->timeboxMicroseconds();
+        $settings = new Settings($repository);
+        $microseconds = $settings->timeboxMicroseconds();
 
-        if ($microseconds > 0 && ! is_int($repository->get('auth.timebox_duration'))) {
+        if ($microseconds > 0 && ! $settings->guardTimeboxIsSet()) {
             $repository->set('auth.timebox_duration', $microseconds);
         }
     }
 
     /**
-     * Hold Fortify's two-factor step of the sign-in to the minimum the guard reads, unless the
-     * package's minimum is switched off.
+     * Hold the steps of Fortify's sign-in that check a password to the minimum the guard reads,
+     * unless the package's minimum is switched off.
      *
-     * With the two-factor feature on, that step checks the password before the guard does and
-     * holds a failure to a fixed 200 milliseconds of its own. The step is wrapped where Fortify's
-     * contract resolves, so one the application binds with
+     * With the two-factor feature on, Fortify's two-factor step checks the password before the
+     * guard does and holds a failure to a fixed 200 milliseconds of its own. The step is wrapped
+     * where Fortify's contract resolves, so one the application binds with
      * `Fortify::redirectUserForTwoFactorAuthenticationUsing()` is held as well. A login pipeline of
      * the application's own that names a class instead of the contract is left as it is.
+     *
+     * With a callback set through `Fortify::authenticateUsing()`, Fortify's `AttemptToAuthenticate`
+     * checks the password through that callback and never through the guard, so nothing else holds
+     * its failure. That step is wrapped where its class resolves, which is also where a login
+     * pipeline of the application's own that names the class resolves it.
      */
-    private function holdTheTwoFactorStepToTheTimebox(): void
+    private function holdTheSignInStepsToTheTimebox(): void
     {
         if ($this->app->make(Settings::class)->timeboxMicroseconds() === 0) {
             return;
@@ -98,7 +130,12 @@ final class FortifyHardeningServiceProvider extends ServiceProvider
 
         $this->app->extend(
             RedirectsIfTwoFactorAuthenticatable::class,
-            static fn (RedirectsIfTwoFactorAuthenticatable $step, Container $app): TimeboxedTwoFactorStep => new TimeboxedTwoFactorStep($step, $app->make(Repository::class)),
+            static fn (RedirectsIfTwoFactorAuthenticatable $step, Container $app): TimeboxedTwoFactorStep => new TimeboxedTwoFactorStep($step, $app->make(Settings::class)),
+        );
+
+        $this->app->extend(
+            AttemptToAuthenticate::class,
+            static fn (AttemptToAuthenticate $step, Container $app): TimeboxedSignInStep => new TimeboxedSignInStep($step, $app->make(Settings::class)),
         );
     }
 
@@ -124,7 +161,11 @@ final class FortifyHardeningServiceProvider extends ServiceProvider
             $this->app->make(Dispatcher::class)->listen(PasswordReset::class, RememberCompletedPasswordReset::class);
         }
 
-        if ($settings->hardensRegistration()) {
+        // The registration only where people sign in with their address. With a username of its own, a taken
+        // username has to be refused for the person to pick another, and the package's controller would reach
+        // that refusal for a free address alone, which tells a free address from a taken one. Fortify's
+        // controller stays in place there.
+        if ($settings->hardensRegistration() && $settings->signsInWithTheAddress()) {
             $this->app->bind(RegisteredUserController::class, EnumerationSafeRegisteredUserController::class);
         }
 
@@ -156,10 +197,14 @@ final class FortifyHardeningServiceProvider extends ServiceProvider
      * `array_is_list([])` is true, which is the behavior wanted here: an empty array is a host
      * saying "none", and descending into it could only re-introduce what it emptied.
      *
-     * A host with a cached config is never merged at all, by the framework's design. For those
-     * installations the published file is the whole truth, so a package that reads a nested key
-     * needs its read-site fallback to agree with the shipped default. The two are halves of one
-     * guarantee.
+     * Recursion stops at a catalog as well, a section named in CATALOG_SECTIONS. Its keys are the
+     * host's, so a key missing from the published catalog is one the host removed, and laying the
+     * default under it would hand that entry back.
+     *
+     * A host with a cached config is not merged at runtime: the cache already holds the merge
+     * `config:cache` did when it ran. A key a later release adds is missing from it until the host
+     * caches again, so a package that reads a nested key needs its read-site fallback to agree with
+     * the shipped default.
      */
     private function mergeConfigRecursivelyFrom(string $path, string $key): void
     {
@@ -179,15 +224,19 @@ final class FortifyHardeningServiceProvider extends ServiceProvider
         $repository->set($key, $this->mergeConfigSections(
             is_array($shipped) ? $shipped : [],
             is_array($existing) ? $existing : [],
+            $key.'.',
+            self::CATALOG_SECTIONS,
         ));
     }
 
     /**
      * @param  array<array-key, mixed>  $shipped
      * @param  array<array-key, mixed>  $published
+     * @param  string  $path  the dotted path of the two maps, so a catalog is recognized at any depth
+     * @param  list<string>  $catalogs  the dotted paths of the catalogs, which the merge takes as published
      * @return array<array-key, mixed>
      */
-    private function mergeConfigSections(array $shipped, array $published): array
+    private function mergeConfigSections(array $shipped, array $published, string $path = '', array $catalogs = []): array
     {
         foreach ($shipped as $key => $value) {
             if (! array_key_exists($key, $published)) {
@@ -196,12 +245,12 @@ final class FortifyHardeningServiceProvider extends ServiceProvider
                 continue;
             }
 
-            // Recurse only where BOTH sides are maps. If either is a list, or the published
-            // value is a scalar or an explicit null, what the host wrote stands. An explicit
-            // null is a value like any other here, which keeps "write => null to switch this
-            // off" working exactly as a shipped config file describes it.
-            if (is_array($value) && is_array($published[$key]) && ! array_is_list($value) && ! array_is_list($published[$key])) {
-                $published[$key] = $this->mergeConfigSections($value, $published[$key]);
+            // Recurse only where both sides are maps and the section is no catalog. If either is a
+            // list, or the published value is a scalar or an explicit null, what the host wrote
+            // stands. An explicit null is a value like any other here, which keeps "write => null
+            // to switch this off" working exactly as a shipped config file describes it.
+            if (is_array($value) && is_array($published[$key]) && ! array_is_list($value) && ! array_is_list($published[$key]) && ! in_array($path.$key, $catalogs, true)) {
+                $published[$key] = $this->mergeConfigSections($value, $published[$key], $path.$key.'.', $catalogs);
             }
         }
 

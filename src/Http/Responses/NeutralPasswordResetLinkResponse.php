@@ -6,6 +6,7 @@ namespace Pushery\FortifyHardening\Http\Responses;
 
 use Illuminate\Contracts\Auth\PasswordBroker;
 use Illuminate\Contracts\Container\Container;
+use Illuminate\Http\Request;
 use Laravel\Fortify\Contracts\FailedPasswordResetLinkRequestResponse;
 use Laravel\Fortify\Contracts\SuccessfulPasswordResetLinkRequestResponse;
 use Override;
@@ -23,6 +24,13 @@ final readonly class NeutralPasswordResetLinkResponse implements FailedPasswordR
 {
     public function __construct(private Container $container) {}
 
+    /**
+     * @param  mixed  $request  the request, which the contract of a response leaves untyped
+     *
+     * @phpstan-param  Request  $request
+     *
+     * @return mixed the response, which the contract leaves untyped: Laravel's, Inertia's or the application's own
+     */
     #[Override]
     public function toResponse(mixed $request): mixed
     {

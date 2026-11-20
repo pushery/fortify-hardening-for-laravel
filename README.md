@@ -1,6 +1,6 @@
 <p align="center">
   <a href="https://github.com/pushery/fortify-hardening-for-laravel">
-    <img src="art/header.png" alt="Fortify Hardening for Laravel" width="100%">
+    <img src="https://raw.githubusercontent.com/pushery/fortify-hardening-for-laravel/main/art/header.png" alt="Fortify Hardening for Laravel" width="100%">
   </a>
 </p>
 
@@ -11,13 +11,13 @@
 [![Laravel Versions](https://badge.laravel.cloud/badge/pushery/fortify-hardening-for-laravel?style=flat)](https://packagist.org/packages/pushery/fortify-hardening-for-laravel)
 [![License](https://img.shields.io/packagist/l/pushery/fortify-hardening-for-laravel.svg)](LICENSE)
 
-[![Tests](https://img.shields.io/badge/tests-Pest%205-8BC34A.svg)](https://pestphp.com)
-![Coverage](https://img.shields.io/badge/coverage-100%25-brightgreen.svg)
-![Type Coverage](https://img.shields.io/badge/types-100%25-brightgreen.svg)
-[![PHPStan](https://img.shields.io/badge/PHPStan-max-blue.svg)](https://phpstan.org)
-[![Code Style](https://img.shields.io/badge/code%20style-pint-orange.svg)](https://laravel.com/docs/pint)
+[![Tests: Pest 5](https://img.shields.io/badge/tests-Pest%205-8BC34A.svg)](https://pestphp.com)
+![Coverage: 100%](https://img.shields.io/badge/coverage-100%25-brightgreen.svg)
+![Type coverage: 100%](https://img.shields.io/badge/types-100%25-brightgreen.svg)
+[![PHPStan: level 10](https://img.shields.io/badge/PHPStan-10-blue.svg)](https://phpstan.org)
+[![Code style: Pint](https://img.shields.io/badge/code%20style-pint-orange.svg)](https://laravel.com/docs/pint)
 
-Stops Laravel Fortify from revealing whether an account exists: neutral answers on registration and password reset, equal timing, and a notice to the owner.
+Stops account enumeration in Laravel Fortify: neutral answers on registration and password reset, equal timing, and a notice to the owner.
 
 ## Documentation
 
@@ -32,11 +32,11 @@ This README is the quick start; the guides and the configuration reference live 
 - Laravel Fortify 1.34.1+, with its `registration` and `resetPasswords` features
 
 Tested on PostgreSQL and MySQL 8.4, the databases Laravel Cloud runs (serverless Postgres
-and MySQL 8.4 LTS), so it runs there out of the box. The fast suite runs on SQLite.
+and MySQL 8.4 LTS). The fast suite runs on SQLite.
 
-Tested on **PHP 8.4** — the floor of the declared range, because a `>=` promise is
-only proven by running on the boundary — and on **PHP 8.5**, so the upper half of
-`^8.4` is exercised here rather than first by a consumer.
+Tested on the floor of the declared PHP range, because a `>=` promise is only proven
+by running on the boundary, and on the minor version above it, so the range above the
+floor is exercised here rather than first by a consumer.
 
 ## Installation
 
@@ -58,7 +58,7 @@ difference too. With the package installed, Fortify's own routes answer every ca
 | Reset link | an unknown address is refused, a recent one is told to wait | every request reads like a link that was sent |
 | Password reset | an unknown address and a wrong token give different errors | every failure reads like a wrong token |
 | Timing | a taken address answers sooner, a known one takes longer on the password routes | both answers take the same time |
-| Sign-in limiter | failed sign-ins are counted under the address and the IP as they are | the same count under a key hashed with the application key |
+| Sign-in limiter | failed sign-ins are counted under the address and the IP as they are, and again by the `login` limiter of your service provider under an MD5 a guess can compute | Fortify's count under a key hashed with the application key, and `LoginThrottleKey::hash()` to key the `login` limiter the same way |
 
 Nothing needs to be wired: the package puts its answers in place of Fortify's through the
 container. Give new accounts a verification mail (`MustVerifyEmail` on the user model) and show
@@ -74,7 +74,9 @@ its own uses the registrar, which looks the address up, creates the account or s
 and signs nobody in:
 
 ```php
+use App\Http\Requests\RegisterRequest;
 use App\Models\User;
+use Illuminate\Http\RedirectResponse;
 use Pushery\FortifyHardening\Registration\Registrar;
 
 public function store(RegisterRequest $request, Registrar $registrar): RedirectResponse
@@ -103,16 +105,19 @@ mails of its own can use the same key:
 ```php
 use Pushery\FortifyHardening\Support\Mailbox;
 
-$key = 'contact-form:'.hash('sha256', Mailbox::of($request->string('email')->value()));
+$key = 'contact-form:'.hash_hmac('sha256', Mailbox::of($request->string('email')->value()), config('app.key'));
 ```
 
 `Mailbox::of()` trims the address and writes it in lower case, drops a `+tag` in the local part, and
 for Gmail drops the dots in the local part and reads `googlemail.com` as `gmail.com`. It is a key to
-count under, not an identity: an account keeps its address as it was typed.
+count under, not an identity: an account keeps its address as it was typed. Hash it with the
+application key, as above and as the package does: an error tracker or a store's monitor records
+cache keys, and a plain hash of an address can be matched against a guessed one.
 
 To prove the property in your own suite, use the assertion the package ships:
 
 ```php
+use App\Models\User;
 use Illuminate\Testing\TestResponse;
 use Pushery\FortifyHardening\Testing\AssertsEnumerationSafety;
 

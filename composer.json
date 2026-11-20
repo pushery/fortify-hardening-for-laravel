@@ -1,11 +1,20 @@
 {
   "$schema": "https://getcomposer.org/schema.json",
   "name": "pushery/fortify-hardening-for-laravel",
-  "description": "Stops Laravel Fortify from revealing whether an account exists: neutral answers on registration and password reset, equal timing, and a notice to the owner.",
+  "description": "Stops account enumeration in Laravel Fortify: neutral answers on registration and password reset, equal timing, and a notice to the owner.",
   "keywords": [
     "laravel",
+    "laravel-fortify",
     "fortify",
-    "hardening"
+    "account-enumeration",
+    "user-enumeration",
+    "email-enumeration",
+    "password-reset",
+    "forgot-password",
+    "timing-attacks",
+    "authentication",
+    "security",
+    "security-hardening"
   ],
   "license": "MIT",
   "authors": [
@@ -44,8 +53,9 @@
     "pestphp/pest-plugin-laravel": "^5.0",
     "pestphp/pest-plugin-phpstan": "^5.0",
     "pestphp/pest-plugin-type-coverage": "^5.0",
-    "phpstan/phpstan": "^2.3.0",
-    "pushery/sqlens-for-laravel": "^0.33.1",
+    "phpstan/phpstan": "2.3.5",
+    "phpstan/phpstan-deprecation-rules": "^2.0.5",
+    "pushery/sqlens-for-laravel": "^0.34.0",
     "rector/rector": "^2.7.0",
     "spaze/phpstan-disallowed-calls": "^4.12",
     "symfony/yaml": "^7.4.17 || ^8.1.5"

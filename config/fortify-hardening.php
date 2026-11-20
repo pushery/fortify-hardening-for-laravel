@@ -78,7 +78,8 @@ return [
         'notice_mentions_password_reset' => true,
 
         // How many mails the registration form may send to one mailbox within
-        // an hour, the verification link of a new account included. Spellings
+        // an hour, the verification link of a new account included: over it,
+        // neither the notice nor the verification link goes out. Spellings
         // that reach the same inbox share it: case, surrounding whitespace, a
         // `+tag` in the local part and, for Gmail, the dots in the local part and
         // the domain `googlemail.com` do not make another address. Read typed
@@ -96,14 +97,18 @@ return [
     | default of 200 ms is shorter than the bcrypt hash an existing account
     | costs at Laravel's 12 rounds, so the difference still shows. The package
     | raises the minimum to the value below, in microseconds, unless your
-    | application sets `auth.timebox_duration` itself. With Fortify's two-factor
-    | feature on, Fortify checks the password in a step of its own first and
-    | holds a failure there to 200 ms from Fortify 1.40 on, not at all before;
-    | the package holds that step to the same minimum. A successful sign-in or
-    | reset still returns at once. `0` leaves Laravel's default in place.
+    | application sets `auth.timebox_duration` itself, and holds a registration
+    | to it as well, a free address and a taken one alike. With Fortify's
+    | two-factor feature on, Fortify checks the password in a step of its own
+    | first and holds a failure there to 200 ms from Fortify 1.40 on, not at all
+    | before; the package holds that step to the same minimum. A successful
+    | sign-in or reset still returns at once. `0` leaves Laravel's default in
+    | place. Only a whole number is read: a value such as `abc`, `0.5`, `.5` or
+    | `-3` lands on the default, since a cast would make `0` of the fractions
+    | and a typo would then switch the minimum off.
     */
     'timebox' => [
-        'microseconds' => is_numeric($timebox = env('FORTIFY_HARDENING_TIMEBOX_MICROSECONDS')) && (int) $timebox >= 0
+        'microseconds' => is_string($timebox = env('FORTIFY_HARDENING_TIMEBOX_MICROSECONDS')) && preg_match('/^\s*\d+\s*$/D', $timebox) === 1
             ? (int) $timebox
             : 1_000_000,
     ],
