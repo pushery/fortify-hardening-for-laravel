@@ -4,6 +4,22 @@ All notable changes to `pushery/fortify-hardening-for-laravel` are documented he
 
 A release carries only the sections that have an entry, in this order: `### ⚠️ Breaking`, `### ✨ Added`, `### 🔧 Changed`, `### ⚡ Performance`, `### 🐛 Fixed`, `### 🔒 Security`, `### 🧹 Deprecated`, `### 🗑️ Removed` and `### 📚 Documentation`.
 
+## [0.9.0] - 2026-11-24
+
+### 🔧 Changed
+
+- **`PruneExpiredCacheKeys` clears a file store as well.** Beside the expired rows under `fortify-hardening:` in a database store, it now deletes the expired files of a file store, which names its files by a hash of the key and so cannot tell the package's from the application's; the store already treats each of them as missing. Redis, Memcached and every other store that expires entries itself stay untouched. The call in the schedule stays `Schedule::call(PruneExpiredCacheKeys::class)->daily();`.
+- **`PruneExpiredCacheKeys` also prunes behind a `failover` store and a `storage` store.** Both of these Laravel cache drivers leave expired entries behind as a database or a file store does. A failover store writes each entry into the first of its stores that answers, so the command prunes each of its stores once. A storage store lays its files out on a filesystem disk the way a file store does in its directory, and the command deletes the expired files the store named there and leaves every other file on the disk alone.
+
+### 🐛 Fixed
+
+- **`assertEnumerationSafe()` compares two JSON:API errors without the id of their request.** http-api names the id of each request in `meta.request_id` from 0.4.0 on, a new one for every request, so two answers that were the same failed the comparison by that id alone. Each error is compared with a placeholder in its place, and a difference in any other member still fails.
+
+### 📚 Documentation
+
+- **The documentation says that the `octane` store of Laravel Octane is out of the pruner's reach.** The store keeps an expired entry in a table of a fixed number of rows, `octane.cache.rows`, until its key is written again or the server restarts, and the scheduler, where the pruner runs, sees an empty store. Once the table is full, writing a new key fails, so the documentation advises against making `octane` the default cache store of an application that runs this package.
+- **The documentation of the sign-in limiter says where a visitor can claim another IP.** Below `laravel/framework` 13.43.0, an application that configures no trusted proxy and whose web server answers any host name takes a header the visitor sends as the mark of a Forge or Vapor proxy (GHSA-559m-v249-7qw2), so each attempt can come from another IP and start a count of its own. The timing page names the framework update, trusted proxies and a web server that answers only the application's host names as the ways to close it.
+
 ## [0.8.0] - 2026-11-20
 
 ### ✨ Added
@@ -214,7 +230,8 @@ The first release. The package stops Laravel Fortify from revealing whether an a
 - **`AssertsEnumerationSafety`**, the assertion the package proves itself with, for an application's own suite.
 - **Switches that read what a host writes.** Each section is switched off with `false`, `0`, `no`, `off` or an empty value, in any case and with spaces around it, and any other value keeps it on.
 
-[Unreleased]: https://github.com/pushery/fortify-hardening-for-laravel/compare/v0.8.0...HEAD
+[Unreleased]: https://github.com/pushery/fortify-hardening-for-laravel/compare/v0.9.0...HEAD
+[0.9.0]: https://github.com/pushery/fortify-hardening-for-laravel/compare/v0.8.0...v0.9.0
 [0.8.0]: https://github.com/pushery/fortify-hardening-for-laravel/compare/v0.7.0...v0.8.0
 [0.7.0]: https://github.com/pushery/fortify-hardening-for-laravel/compare/v0.6.1...v0.7.0
 [0.6.1]: https://github.com/pushery/fortify-hardening-for-laravel/compare/v0.6.0...v0.6.1

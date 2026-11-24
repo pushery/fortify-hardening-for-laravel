@@ -124,6 +124,10 @@ trait AssertsEnumerationSafety
      * different paths through the code. A body that carries `exception` and `trace` is compared
      * without those four.
      *
+     * A JSON:API error names the id of its request in `meta.request_id`, as http-api answers from
+     * 0.4.0 on, a new one for every request. It says nothing about the identity, so each error is
+     * compared with `<request-id>` in its place.
+     *
      * @param  array<string, string>  $identities
      */
     private static function enumerationComparableBody(string $content, array $identities): string
@@ -136,6 +140,19 @@ trait AssertsEnumerationSafety
 
         if (isset($body['exception'], $body['trace'])) {
             unset($body['exception'], $body['file'], $body['line'], $body['trace']);
+        }
+
+        $errors = $body['errors'] ?? null;
+
+        if (is_array($errors)) {
+            foreach ($errors as $index => $error) {
+                if (is_array($error) && is_array($error['meta'] ?? null) && array_key_exists('request_id', $error['meta'])) {
+                    $error['meta']['request_id'] = '<request-id>';
+                    $errors[$index] = $error;
+                }
+            }
+
+            $body['errors'] = $errors;
         }
 
         $ids = [];
