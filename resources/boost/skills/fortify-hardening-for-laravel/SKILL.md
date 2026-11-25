@@ -95,11 +95,12 @@ Schedule::call(PruneExpiredCacheKeys::class)->daily();
   controller of the application's own with the registrar, which looks the address up under
   `fortify.email`, and answer for the username before that, the same way for a free and a taken
   address.
-- Hash the key of the `login` rate limiter that Fortify's installer writes into
+- Key the `login` rate limiter that Fortify's installer writes into
   `app/Providers/FortifyServiceProvider.php` with
-  `Pushery\FortifyHardening\Support\LoginThrottleKey::hash()`. Laravel keeps the count of that
-  limiter under an MD5 of its name and its key, which a guessed address and IP compute; the package
-  hashes the key of Fortify's own `LoginRateLimiter` and leaves the application's limiter alone.
+  `Pushery\FortifyHardening\Support\LoginThrottleKey::of()`. Laravel keeps the count of that
+  limiter under an MD5 of its name and its key, which a guessed address and IP compute. `of()`
+  builds the key the package's own `LoginRateLimiter` counts under, hashed with the application key
+  and counting an IPv6 client by its /64; the package leaves the application's limiter alone.
 
 ## Examples
 
@@ -128,20 +129,16 @@ public function store(RegisterRequest $request, Registrar $registrar): RedirectR
 }
 ```
 
-The `login` limiter in `app/Providers/FortifyServiceProvider.php`, its key hashed:
+The `login` limiter in `app/Providers/FortifyServiceProvider.php`, keyed as the package keys its own:
 
 ```php
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\RateLimiter;
-use Illuminate\Support\Str;
-use Laravel\Fortify\Fortify;
 use Pushery\FortifyHardening\Support\LoginThrottleKey;
 
 RateLimiter::for('login', function (Request $request) {
-    $throttleKey = Str::transliterate(Str::lower($request->input(Fortify::username())).'|'.$request->ip());
-
-    return Limit::perMinute(5)->by(LoginThrottleKey::hash($throttleKey));
+    return Limit::perMinute(5)->by(LoginThrottleKey::of($request));
 });
 ```
 

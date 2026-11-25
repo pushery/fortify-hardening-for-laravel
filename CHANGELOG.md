@@ -4,6 +4,22 @@ All notable changes to `pushery/fortify-hardening-for-laravel` are documented he
 
 A release carries only the sections that have an entry, in this order: `### ⚠️ Breaking`, `### ✨ Added`, `### 🔧 Changed`, `### ⚡ Performance`, `### 🐛 Fixed`, `### 🔒 Security`, `### 🧹 Deprecated`, `### 🗑️ Removed` and `### 📚 Documentation`.
 
+## [0.10.0] - 2026-11-25
+
+### ✨ Added
+
+- **`LoginThrottleKey::of()` builds the key the package's sign-in limiter counts under.** It takes the request and returns the lower-cased address and the client, an IPv6 client by its /64, hashed with the application key, so that the `login` limiter of the application's service provider counts as the package's own limiter does.
+
+### 🔒 Security
+
+- **The sign-in limiter counts an IPv6 client by its /64.** Fortify counts failed sign-ins per address and full IP, so a host that holds an IPv6 network had five attempts a minute for one account from every address in it. The package's limiter counts an IPv6 client by its /64, the network a single host is usually given, an IPv4 address as it is, and an IPv4 address in its IPv6 form as the IPv4 address it carries. Counts of IPv6 clients that are running when the release is deployed start again.
+
+  **Upgrade:** a `login` limiter in `app/Providers/FortifyServiceProvider.php` that hashes its key with `LoginThrottleKey::hash()` still counts each IPv6 address on its own. Key it with `LoginThrottleKey::of($request)`, as the timing page shows.
+
+### 📚 Documentation
+
+- **The requirements name the versions the package is tested on.** PHP 8.4.27, 8.5.x and 8.6.x, PostgreSQL 18.7 and MySQL 8.4.13, as the lanes run them, in the README and on the start page of the documentation.
+
 ## [0.9.0] - 2026-11-24
 
 ### 🔧 Changed
@@ -230,7 +246,8 @@ The first release. The package stops Laravel Fortify from revealing whether an a
 - **`AssertsEnumerationSafety`**, the assertion the package proves itself with, for an application's own suite.
 - **Switches that read what a host writes.** Each section is switched off with `false`, `0`, `no`, `off` or an empty value, in any case and with spaces around it, and any other value keeps it on.
 
-[Unreleased]: https://github.com/pushery/fortify-hardening-for-laravel/compare/v0.9.0...HEAD
+[Unreleased]: https://github.com/pushery/fortify-hardening-for-laravel/compare/v0.10.0...HEAD
+[0.10.0]: https://github.com/pushery/fortify-hardening-for-laravel/compare/v0.9.0...v0.10.0
 [0.9.0]: https://github.com/pushery/fortify-hardening-for-laravel/compare/v0.8.0...v0.9.0
 [0.8.0]: https://github.com/pushery/fortify-hardening-for-laravel/compare/v0.7.0...v0.8.0
 [0.7.0]: https://github.com/pushery/fortify-hardening-for-laravel/compare/v0.6.1...v0.7.0
