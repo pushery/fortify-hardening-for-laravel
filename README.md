@@ -27,11 +27,11 @@ This README is the quick start; the guides and the configuration reference live 
 
 ## Requirements
 
-- PHP 8.4+
+- PHP 8.4+ (tested on 8.4.27, 8.5.x and 8.6.x)
 - Laravel 13+
 - Laravel Fortify 1.34.1+, with its `registration` and `resetPasswords` features
 
-Tested on PostgreSQL and MySQL 8.4, the databases Laravel Cloud runs (serverless Postgres
+Tested on PostgreSQL 18.7 and MySQL 8.4.13, the databases Laravel Cloud runs (serverless Postgres
 and MySQL 8.4 LTS). The fast suite runs on SQLite.
 
 Tested on the floor of the declared PHP range, because a `>=` promise is only proven
@@ -58,7 +58,7 @@ difference too. With the package installed, Fortify's own routes answer every ca
 | Reset link | an unknown address is refused, a recent one is told to wait | every request reads like a link that was sent |
 | Password reset | an unknown address and a wrong token give different errors | every failure reads like a wrong token |
 | Timing | a taken address answers sooner, a known one takes longer on the password routes | both answers take the same time |
-| Sign-in limiter | failed sign-ins are counted under the address and the IP as they are, and again by the `login` limiter of your service provider under an MD5 a guess can compute | Fortify's count under a key hashed with the application key, and `LoginThrottleKey::hash()` to key the `login` limiter the same way |
+| Sign-in limiter | failed sign-ins are counted under the address and the full IP as they are, so every address of an IPv6 network starts a count of its own, and again by the `login` limiter of your service provider under an MD5 a guess can compute | Fortify's count under a key hashed with the application key, an IPv6 client counted by its /64, and `LoginThrottleKey::of()` to key the `login` limiter the same way |
 
 Nothing needs to be wired: the package puts its answers in place of Fortify's through the
 container. Give new accounts a verification mail (`MustVerifyEmail` on the user model) and show
