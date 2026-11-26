@@ -4,6 +4,18 @@ All notable changes to `pushery/fortify-hardening-for-laravel` are documented he
 
 A release carries only the sections that have an entry, in this order: `### ⚠️ Breaking`, `### ✨ Added`, `### 🔧 Changed`, `### ⚡ Performance`, `### 🐛 Fixed`, `### 🔒 Security`, `### 🧹 Deprecated`, `### 🗑️ Removed` and `### 📚 Documentation`.
 
+## [0.11.0] - 2026-11-26
+
+### 🔧 Changed
+
+- **A switch set to a spelling that says neither on nor off stops the boot.** This holds for `FORTIFY_HARDENING_PASSWORD_RESET_LINK`, `FORTIFY_HARDENING_PASSWORD_RESET`, `FORTIFY_HARDENING_REGISTRATION` and `FORTIFY_HARDENING_HASHED_LOGIN_KEYS`. A value such as `ture` kept the section on. The boot and `config:cache` now stop with an `InvalidArgumentException` that names the variable, the value as written and every spelling for on and off. A missing or empty line and `empty`, `(empty)`, `null` and `(null)` keep the section on, as before.
+
+  **Upgrade:** a host whose `.env` gives one of these variables another spelling corrects it, or deletes the line to keep the section on.
+
+### 🐛 Fixed
+
+- **`LoginThrottleKey::of()` reads a username sent as a list as an empty name.** The `login` limiter its docblock recommends runs before the sign-in is validated, so a `POST /login` with `email[]=…` reached it with a list, and turning the list into text ended the request in an error page. The validation after the limiter now refuses such a request as it refuses an empty name.
+
 ## [0.10.0] - 2026-11-25
 
 ### ✨ Added
@@ -246,7 +258,8 @@ The first release. The package stops Laravel Fortify from revealing whether an a
 - **`AssertsEnumerationSafety`**, the assertion the package proves itself with, for an application's own suite.
 - **Switches that read what a host writes.** Each section is switched off with `false`, `0`, `no`, `off` or an empty value, in any case and with spaces around it, and any other value keeps it on.
 
-[Unreleased]: https://github.com/pushery/fortify-hardening-for-laravel/compare/v0.10.0...HEAD
+[Unreleased]: https://github.com/pushery/fortify-hardening-for-laravel/compare/v0.11.0...HEAD
+[0.11.0]: https://github.com/pushery/fortify-hardening-for-laravel/compare/v0.10.0...v0.11.0
 [0.10.0]: https://github.com/pushery/fortify-hardening-for-laravel/compare/v0.9.0...v0.10.0
 [0.9.0]: https://github.com/pushery/fortify-hardening-for-laravel/compare/v0.8.0...v0.9.0
 [0.8.0]: https://github.com/pushery/fortify-hardening-for-laravel/compare/v0.7.0...v0.8.0

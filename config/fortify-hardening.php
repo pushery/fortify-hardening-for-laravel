@@ -20,10 +20,12 @@ return [
     | Published to config/fortify-hardening.php with
     | `php artisan vendor:publish --tag=fortify-hardening-config`.
     |
-    | A section is switched off with `false`, `0`, `no` or `off`, in any case
-    | and with spaces around it. Any other value keeps it on, and so does a
+    | A section is switched off with `false`, `0`, `no` or `off` and kept on
+    | with `true`, `1`, `yes` or `on`, in any case and with spaces around it. A
     | variable that is not set or set to nothing, as copying a template of a
-    | .env leaves one.
+    | .env leaves one, keeps it on, and so do `empty`, `(empty)`, `null` and
+    | `(null)`. Any other value stops the boot with an error that names the
+    | variable.
     |
     | Read environment values with env() HERE and nowhere else. Outside a config
     | file env() returns null the moment the host app caches its config, so the
@@ -36,7 +38,7 @@ return [
     | asked too recently, exactly as it answers a link that was sent.
     */
     'password_reset_link' => [
-        'enabled' => EnvSwitch::read(env('FORTIFY_HARDENING_PASSWORD_RESET_LINK'), true),
+        'enabled' => EnvSwitch::read(env('FORTIFY_HARDENING_PASSWORD_RESET_LINK'), true, 'FORTIFY_HARDENING_PASSWORD_RESET_LINK'),
     ],
 
     /*
@@ -44,7 +46,7 @@ return [
     | known address whose token is wrong or expired.
     */
     'password_reset' => [
-        'enabled' => EnvSwitch::read(env('FORTIFY_HARDENING_PASSWORD_RESET'), true),
+        'enabled' => EnvSwitch::read(env('FORTIFY_HARDENING_PASSWORD_RESET'), true, 'FORTIFY_HARDENING_PASSWORD_RESET'),
     ],
 
     /*
@@ -53,7 +55,7 @@ return [
     | gets the notice below instead.
     */
     'registration' => [
-        'enabled' => EnvSwitch::read(env('FORTIFY_HARDENING_REGISTRATION'), true),
+        'enabled' => EnvSwitch::read(env('FORTIFY_HARDENING_REGISTRATION'), true, 'FORTIFY_HARDENING_REGISTRATION'),
 
         // The form request that validates a registration before the address is
         // looked up. It must not carry a `unique` rule on the address, and its
@@ -122,7 +124,7 @@ return [
     | it on or off start again.
     */
     'hashed_login_keys' => [
-        'enabled' => EnvSwitch::read(env('FORTIFY_HARDENING_HASHED_LOGIN_KEYS'), true),
+        'enabled' => EnvSwitch::read(env('FORTIFY_HARDENING_HASHED_LOGIN_KEYS'), true, 'FORTIFY_HARDENING_HASHED_LOGIN_KEYS'),
     ],
 
 ];

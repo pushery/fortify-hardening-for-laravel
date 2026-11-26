@@ -36,13 +36,25 @@ final class LoginThrottleKey
      */
     public static function of(Request $request): string
     {
-        return self::hash(Str::transliterate($request->string(Fortify::username())->lower()->value().'|'.self::client($request->ip())));
+        return self::hash(Str::transliterate(self::username($request).'|'.self::client($request->ip())));
     }
 
     /** The throttle key as an HMAC under the application key: the same key gives the same value, and a guess cannot compute it. */
     public static function hash(string $throttleKey): string
     {
         return 'fortify-hardening:login:'.hash_hmac('sha256', $throttleKey, Container::getInstance()->make(Settings::class)->secret());
+    }
+
+    /**
+     * The username of an attempt, lower-cased. A value that is no single word, such as a list sent as `email[]=…`, reads
+     * as an empty name: the `login` limiter above runs before the validation that refuses such a request, and a list
+     * turned into text would end the request in an error page there.
+     */
+    private static function username(Request $request): string
+    {
+        $value = $request->input(Fortify::username());
+
+        return is_scalar($value) ? Str::lower((string) $value) : '';
     }
 
     /** The client an attempt is counted for, by the rule {@see self::of()} states. */
